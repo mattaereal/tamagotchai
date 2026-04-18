@@ -43,12 +43,12 @@ screens:
 
       - name: Lotus
         url: https://lotus.therektgames.com/health
-        type: lotus_health
+        type: json
         icon: lotus
         items:
-          - key: Lotus
+          - key: status
             label: Live
-          - key: Queue
+          - key: pending
             label: Queue
 
   - name: Lotus
@@ -56,31 +56,30 @@ screens:
     poll_interval: 5
     display_duration: 15
     url: https://lotus.therektgames.com/health
-    stats_url: https://lotus.therektgames.com/stats
     sprites:
       idle: img/irk_1.png
       working: img/irk_2.png
       error: img/irk_3.png
       success: img/irk_4.png
     mood_map:
-      field: status
+      key: status
       ok: idle
       ok_busy: working
       error: error
     info_lines:
       - label: status
-        field: status
+        key: status
       - label: pending
-        field: pending
+        key: pending
       - label: PRs
-        template: "+{prs_created} M{prs_merged}"
-        fields: [prs_created, prs_merged]
+        template: "+{0} M{1}"
+        keys: [prs_created, prs_merged]
       - label: Issues
-        field: issues_created
+        key: issues_created
       - label: Resolved
-        field: comments_resolved
+        key: comments_resolved
       - label: Commits
-        field: commits_today
+        key: commits_today
       - label: Last
-        field: last_action
+        key: last_action
         max_length: 18

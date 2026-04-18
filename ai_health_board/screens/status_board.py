@@ -1,7 +1,9 @@
 """Generic status board screen (template: status_board).
 
 Displays categories with items, each showing a status icon.
-Data comes from provider endpoints defined per-category in config.
+Supports two category types:
+- statuspage/lotus_health: uses provider normalization
+- json: fetches raw JSON and maps item keys to statuses via convention
 """
 
 import asyncio
@@ -13,7 +15,7 @@ from typing import Any, Dict, List, Optional
 from PIL import Image, ImageDraw
 
 from .base import Screen
-from ..config import ScreenConfig, StatusBoardCategory
+from ..config import ScreenConfig, StatusBoardCategory, resolve_key
 from ..models import ServiceStatus, ComponentStatus, ProviderStatus
 from ..providers import get_provider
 from ..cache import load_cache, save_cache
@@ -26,6 +28,43 @@ _STATUS_ICONS = {
     "DOWN": "[-]",
     "UNKNOWN": "[?]",
 }
+
+_JSON_STATUS_MAP = {
+    "ok": ServiceStatus.OK,
+    "up": ServiceStatus.OK,
+    "operational": ServiceStatus.OK,
+    "healthy": ServiceStatus.OK,
+    "true": ServiceStatus.OK,
+    "degraded": ServiceStatus.DEGRADED,
+    "warning": ServiceStatus.DEGRADED,
+    "partial": ServiceStatus.DEGRADED,
+    "down": ServiceStatus.DOWN,
+    "error": ServiceStatus.DOWN,
+    "false": ServiceStatus.DOWN,
+    "outage": ServiceStatus.DOWN,
+    "offline": ServiceStatus.DOWN,
+}
+
+
+def _json_value_to_status(val: Any) -> ServiceStatus:
+    """Map a JSON value to ServiceStatus using convention."""
+    if val is None:
+        return ServiceStatus.UNKNOWN
+
+    if isinstance(val, bool):
+        return ServiceStatus.OK if val else ServiceStatus.DOWN
+
+    if isinstance(val, (int, float)):
+        return ServiceStatus.OK if val == 0 else ServiceStatus.DEGRADED
+
+    if isinstance(val, str):
+        return _JSON_STATUS_MAP.get(val.lower(), ServiceStatus.UNKNOWN)
+
+    if isinstance(val, dict):
+        s = val.get("status", val.get("state", ""))
+        return _JSON_STATUS_MAP.get(str(s).lower(), ServiceStatus.UNKNOWN)
+
+    return ServiceStatus.UNKNOWN
 
 
 def _make_anthropic_icon() -> Image.Image:
@@ -198,7 +237,6 @@ _BUILTIN_ICONS: Dict[str, Image.Image] = {}
 
 
 def _get_icon(icon_name: str) -> Optional[Image.Image]:
-    """Get a pixel art icon by name or load from file path."""
     if not _BUILTIN_ICONS:
         _BUILTIN_ICONS["anthropic"] = _make_anthropic_icon()
         _BUILTIN_ICONS["openai"] = _make_openai_icon()
@@ -231,8 +269,6 @@ def _resolve_icon_key(category_name: str, category_type: str) -> str:
 
 
 class CategoryData:
-    """Holds fetched status for one category."""
-
     def __init__(self, name: str, icon_key: str, items: Dict[str, ServiceStatus]):
         self.name = name
         self.icon_key = icon_key
@@ -262,51 +298,81 @@ class StatusBoardScreen(Screen):
     def display_duration(self) -> int:
         return self._display_duration
 
-    async def fetch(self, session: Any) -> None:
-        from aiohttp import ClientSession
+    async def _fetch_json(self, session: Any, url: str) -> Dict[str, Any]:
+        import aiohttp
 
+        resp = await session.get(url, timeout=aiohttp.ClientTimeout(total=10))
+        resp.raise_for_status()
+        return await resp.json()
+
+    async def _fetch_provider_category(
+        self, session: Any, cat: StatusBoardCategory
+    ) -> CategoryData:
+        icon_key = (
+            cat.icon if cat.icon != "generic" else _resolve_icon_key(cat.name, cat.type)
+        )
+        items: Dict[str, ServiceStatus] = {}
+
+        from ..config import ProviderConfig
+
+        pc = ProviderConfig(
+            name=cat.name,
+            type=cat.type,
+            url=cat.url,
+            components=[item.key for item in cat.items],
+        )
+        provider = get_provider(pc)
+        result = await provider.get_status(session)
+
+        comp_map = {c.name: c for c in result.components}
+        for item in cat.items:
+            if item.key in comp_map:
+                items[item.label] = comp_map[item.key].status
+            else:
+                items[item.label] = ServiceStatus.UNKNOWN
+
+        return CategoryData(name=cat.name, icon_key=icon_key, items=items)
+
+    async def _fetch_json_category(
+        self, session: Any, cat: StatusBoardCategory
+    ) -> CategoryData:
+        icon_key = (
+            cat.icon if cat.icon != "generic" else _resolve_icon_key(cat.name, cat.type)
+        )
+        items: Dict[str, ServiceStatus] = {}
+
+        try:
+            data = await self._fetch_json(session, cat.url)
+            for item in cat.items:
+                val = resolve_key(data, item.key)
+                items[item.label] = _json_value_to_status(val)
+        except Exception as e:
+            logger.warning(f"Fetch failed for json category {cat.name}: {e}")
+            for item in cat.items:
+                items[item.label] = ServiceStatus.UNKNOWN
+
+        return CategoryData(name=cat.name, icon_key=icon_key, items=items)
+
+    async def fetch(self, session: Any) -> None:
         categories: List[CategoryData] = []
 
         for cat in self._config.categories:
-            icon_key = (
-                cat.icon
-                if cat.icon != "generic"
-                else _resolve_icon_key(cat.name, cat.type)
-            )
-            items: Dict[str, ServiceStatus] = {}
-
-            try:
-                from ..providers import get_provider
-                from ..config import ProviderConfig
-
-                pc = ProviderConfig(
-                    name=cat.name,
-                    type=cat.type,
-                    url=cat.url,
-                    components=[item.key for item in cat.items],
-                )
-                provider = get_provider(pc)
-                result = await provider.get_status(session)
-
-                comp_map = {c.name: c for c in result.components}
-                for item in cat.items:
-                    if item.key in comp_map:
-                        items[item.label] = comp_map[item.key].status
-                    else:
-                        items[item.label] = ServiceStatus.UNKNOWN
-
-            except Exception as e:
-                logger.warning(f"Fetch failed for category {cat.name}: {e}")
-                for item in cat.items:
-                    items[item.label] = ServiceStatus.UNKNOWN
-
-            categories.append(
-                CategoryData(
-                    name=cat.name,
-                    icon_key=icon_key,
-                    items=items,
-                )
-            )
+            if cat.type == "json":
+                categories.append(await self._fetch_json_category(session, cat))
+            else:
+                try:
+                    categories.append(await self._fetch_provider_category(session, cat))
+                except Exception as e:
+                    logger.warning(f"Fetch failed for category {cat.name}: {e}")
+                    icon_key = (
+                        cat.icon
+                        if cat.icon != "generic"
+                        else _resolve_icon_key(cat.name, cat.type)
+                    )
+                    items = {item.label: ServiceStatus.UNKNOWN for item in cat.items}
+                    categories.append(
+                        CategoryData(name=cat.name, icon_key=icon_key, items=items)
+                    )
 
         self._categories = categories
         self._last_refresh = datetime.now(timezone.utc)

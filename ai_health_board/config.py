@@ -2,12 +2,30 @@
 
 import logging
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field as dataclass_field
 from typing import Any, Dict, List, Optional
 
 import yaml
 
 logger = logging.getLogger(__name__)
+
+
+def resolve_key(data: dict, key_path: str, default: Any = None) -> Any:
+    """Resolve a dot-notation key path against a dict.
+
+    Examples:
+        resolve_key({"status": "ok"}, "status") -> "ok"
+        resolve_key({"a": {"b": 5}}, "a.b") -> 5
+        resolve_key({"x": 1}, "y.z") -> None
+    """
+    keys = key_path.split(".")
+    current = data
+    for k in keys:
+        if isinstance(current, dict) and k in current:
+            current = current[k]
+        else:
+            return default
+    return current
 
 
 @dataclass
@@ -26,7 +44,7 @@ class ProviderConfig:
     name: str
     type: str
     url: str
-    components: List[str] = field(default_factory=list)
+    components: List[str] = dataclass_field(default_factory=list)
 
 
 @dataclass
@@ -41,12 +59,12 @@ class StatusBoardCategory:
     url: str
     type: str
     icon: str = "generic"
-    items: List[StatusBoardItem] = field(default_factory=list)
+    items: List[StatusBoardItem] = dataclass_field(default_factory=list)
 
 
 @dataclass
 class MoodMapConfig:
-    field: str = "status"
+    key: str = "status"
     ok: str = "idle"
     ok_busy: str = "working"
     error: str = "error"
@@ -55,9 +73,9 @@ class MoodMapConfig:
 @dataclass
 class InfoLineConfig:
     label: str
-    source_field: str = ""
+    key: str = ""
     template: str = ""
-    field_keys: List[str] = field(default_factory=list)
+    keys: List[str] = dataclass_field(default_factory=list)
     max_length: int = 20
 
 
@@ -75,20 +93,21 @@ class ScreenConfig:
     template: str
     poll_interval: int = 30
     display_duration: int = 30
-    categories: List[StatusBoardCategory] = field(default_factory=list)
+    categories: List[StatusBoardCategory] = dataclass_field(default_factory=list)
     url: str = ""
-    stats_url: str = ""
     sprites: Optional[SpriteConfig] = None
     mood_map: Optional[MoodMapConfig] = None
-    info_lines: List[InfoLineConfig] = field(default_factory=list)
+    info_lines: List[InfoLineConfig] = dataclass_field(default_factory=list)
 
 
 @dataclass
 class AppConfig:
     refresh_seconds: int = 300
     timezone: str = "UTC"
-    display: DisplayConfig = field(default_factory=lambda: DisplayConfig("mock"))
-    screens: List[ScreenConfig] = field(default_factory=list)
+    display: DisplayConfig = dataclass_field(
+        default_factory=lambda: DisplayConfig("mock")
+    )
+    screens: List[ScreenConfig] = dataclass_field(default_factory=list)
 
     @staticmethod
     def from_dict(data: Dict[str, Any]) -> "AppConfig":
@@ -142,7 +161,7 @@ class AppConfig:
             mood_raw = s_raw.get("mood_map")
             if mood_raw and isinstance(mood_raw, dict):
                 mood_map = MoodMapConfig(
-                    field=mood_raw.get("field", "status"),
+                    key=mood_raw.get("key", mood_raw.get("field", "status")),
                     ok=mood_raw.get("ok", "idle"),
                     ok_busy=mood_raw.get("ok_busy", "working"),
                     error=mood_raw.get("error", "error"),
@@ -153,9 +172,9 @@ class AppConfig:
                 info_lines.append(
                     InfoLineConfig(
                         label=il_raw.get("label", ""),
-                        source_field=il_raw.get("field", ""),
+                        key=il_raw.get("key", il_raw.get("field", "")),
                         template=il_raw.get("template", ""),
-                        field_keys=il_raw.get("fields", []),
+                        keys=il_raw.get("keys", il_raw.get("fields", [])),
                         max_length=il_raw.get("max_length", 20),
                     )
                 )
@@ -168,7 +187,6 @@ class AppConfig:
                     display_duration=s_raw.get("display_duration", 30),
                     categories=categories,
                     url=s_raw.get("url", ""),
-                    stats_url=s_raw.get("stats_url", ""),
                     sprites=sprites,
                     mood_map=mood_map,
                     info_lines=info_lines,

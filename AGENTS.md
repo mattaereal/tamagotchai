@@ -60,17 +60,19 @@ python app.py doctor
 Screens are defined in YAML config using templates. Two templates exist:
 
 1. **`status_board`** - Category/bullet status display
-   - Each category has a url, type (statuspage/lotus_health), icon, and items
+   - Each category has a url, type (statuspage/json), icon, and items
+   - `statuspage`: uses provider normalization (component name matching)
+   - `json`: fetches raw JSON, maps item keys to statuses via convention (dot-notation via `resolve_key()`)
    - Items map upstream component keys to short display labels
    - Built-in icons: `anthropic`, `openai`, `lotus`, `generic`
    - Custom icons: pass a path to a 12x12 PNG file
 
 2. **`tamagotchi`** - Character-based agent monitor
+   - Single `url` returns JSON; all key access uses dot-notation via `resolve_key()`
    - Configurable sprites (idle/working/error/success) from PNG files
    - `mood_map` defines which JSON field drives sprite selection
    - `info_lines` define what data appears below the sprite
-   - Supports simple field extraction and template strings (e.g. `+{prs_created} M{prs_merged}`)
-   - Optional `stats_url` for additional data endpoint
+   - Supports simple key extraction and positional template strings (e.g. `+{0} M{1}` with `keys: [prs_created, prs_merged]`)
 
 ### Key Files
 
@@ -88,7 +90,6 @@ ai_health_board/
   providers/
     base.py              # StatusProvider ABC
     statuspage.py        # Atlassian Statuspage adapter
-    lotus_health.py      # Lotus health endpoint adapter
   scheduler.py           # Async screen-cycling loop
   models.py              # ServiceStatus, ComponentStatus, ProviderStatus, AppState
 app.py                   # CLI entrypoint (run, once, preview, demo, doctor)
@@ -118,7 +119,7 @@ python -m pytest tests/ -v
 All 54 tests should pass. Tests cover:
 - Config loading and data classes
 - Screen rendering (status board + tamagotchi)
-- Provider normalization (statuspage + lotus_health)
+- Provider normalization (statuspage)
 - Pixel art icon generation
 - Mood resolution and info line formatting
 - Mock data injection for demo mode

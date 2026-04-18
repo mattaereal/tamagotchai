@@ -1,8 +1,8 @@
 """Generic tamagotchi screen (template: tamagotchi).
 
 Config-driven sprites, mood mapping, and info lines.
-Fetches raw JSON from url (and optional stats_url), merges into a flat dict,
-and renders based on mood_map and info_lines from config.
+Fetches raw JSON from a single url, extracts values using
+dot-notation key paths via resolve_key().
 """
 
 import logging
@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional
 from PIL import Image, ImageDraw
 
 from .base import Screen
-from ..config import ScreenConfig
+from ..config import ScreenConfig, resolve_key
 
 logger = logging.getLogger(__name__)
 
@@ -65,29 +65,17 @@ class TamagotchiScreen(Screen):
     async def fetch(self, session: Any) -> None:
         import aiohttp
 
-        data: Dict[str, Any] = {}
-
         try:
             resp = await session.get(
                 self._config.url, timeout=aiohttp.ClientTimeout(total=10)
             )
             resp.raise_for_status()
             data = await resp.json()
+            if not isinstance(data, dict):
+                data = {"value": data}
         except Exception as e:
             logger.warning(f"Fetch failed for {self._config.name}: {e}")
-            data["__fetch_error"] = True
-
-        if self._config.stats_url:
-            try:
-                resp = await session.get(
-                    self._config.stats_url, timeout=aiohttp.ClientTimeout(total=10)
-                )
-                resp.raise_for_status()
-                stats_data = await resp.json()
-                if isinstance(stats_data, dict):
-                    data.update(stats_data)
-            except Exception as e:
-                logger.debug(f"Stats fetch failed (non-critical): {e}")
+            data = {"__fetch_error": True}
 
         data["__last_checked"] = datetime.now(timezone.utc).isoformat()
         self._data = data
@@ -99,8 +87,8 @@ class TamagotchiScreen(Screen):
             self._mood = "idle"
             return
 
-        field_val = str(self._data.get(mm.field, "")).lower()
-        pending = self._data.get("pending", 0)
+        field_val = str(resolve_key(self._data, mm.key, "")).lower()
+        pending = resolve_key(self._data, "pending", 0)
 
         if field_val == "ok":
             if pending and int(pending) > 0:
@@ -173,15 +161,15 @@ class TamagotchiScreen(Screen):
         return img
 
     def _format_info_line(self, il) -> str:
-        if il.template and il.field_keys:
+        if il.template and il.keys:
             try:
-                vals = {f: self._data.get(f, "?") for f in il.field_keys}
-                return il.template.format(**vals)
+                vals = [str(resolve_key(self._data, k, "?")) for k in il.keys]
+                return il.template.format(*vals)
             except (KeyError, IndexError):
                 return "?"
 
-        if il.source_field:
-            val = self._data.get(il.source_field, "")
+        if il.key:
+            val = resolve_key(self._data, il.key, "")
             return str(val)
 
         return ""

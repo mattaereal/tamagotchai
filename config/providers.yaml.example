@@ -18,6 +18,15 @@ display:
 # Templates: status_board, tamagotchi
 screens:
   # --- status_board: category/bullet status display ---
+  # Category types:
+  #   statuspage - Atlassian Statuspage adapter
+  #   json - Fetch raw JSON, map item keys to statuses by convention
+  #          (ok/up/true/0=OK, degraded/warning/non-zero=DEGRADED,
+  #           down/error/false=DOWN, else UNKNOWN)
+  # Item keys use dot-notation for nested access (e.g. "status.health")
+  #
+  # Built-in icons: anthropic, openai, lotus, generic
+  # Custom icons: path to a 12x12 PNG file
   - name: AI Health
     template: status_board
     poll_interval: 30
@@ -26,10 +35,10 @@ screens:
       - name: Claude
         url: https://status.claude.com/api/v2/summary.json
         type: statuspage
-        icon: anthropic          # built-in: anthropic, openai, lotus, generic; or path to 12x12 PNG
+        icon: anthropic
         items:
-          - key: claude.ai       # upstream component key
-            label: AI            # short display name
+          - key: claude.ai
+            label: AI
           - key: Claude Code
             label: Code
           - key: Claude API (api.anthropic.com)
@@ -51,46 +60,50 @@ screens:
 
       - name: Lotus
         url: https://lotus.therektgames.com/health
-        type: lotus_health
+        type: json
         icon: lotus
         items:
-          - key: Lotus
+          - key: status
             label: Live
-          - key: Queue
+          - key: pending
             label: Queue
 
   # --- tamagotchi: character-based agent monitor ---
+  # Single url returns JSON. All key access uses dot-notation.
+  # mood_map.key: which JSON field drives sprite selection
+  # info_lines: each line extracts from JSON via key or template+keys
+  #   - key: single field, dot-notation (e.g. "status" or "data.health")
+  #   - template + keys: positional format (e.g. "+{0} M{1}" with keys: [prs_created, prs_merged])
   # You can have multiple tamagotchi screens for different agents
   - name: Lotus
     template: tamagotchi
     poll_interval: 5
     display_duration: 15
     url: https://lotus.therektgames.com/health
-    stats_url: https://lotus.therektgames.com/stats   # optional
     sprites:
       idle: img/irk_1.png
       working: img/irk_2.png
       error: img/irk_3.png
       success: img/irk_4.png
     mood_map:
-      field: status              # JSON field to check
-      ok: idle                   # value=ok + pending=0 -> idle sprite
-      ok_busy: working           # value=ok + pending>0 -> working sprite
-      error: error               # value!=ok -> error sprite
+      key: status
+      ok: idle
+      ok_busy: working
+      error: error
     info_lines:
       - label: status
-        field: status
+        key: status
       - label: pending
-        field: pending
+        key: pending
       - label: PRs
-        template: "+{prs_created} M{prs_merged}"
-        fields: [prs_created, prs_merged]
+        template: "+{0} M{1}"
+        keys: [prs_created, prs_merged]
       - label: Issues
-        field: issues_created
+        key: issues_created
       - label: Resolved
-        field: comments_resolved
+        key: comments_resolved
       - label: Commits
-        field: commits_today
+        key: commits_today
       - label: Last
-        field: last_action
+        key: last_action
         max_length: 18
