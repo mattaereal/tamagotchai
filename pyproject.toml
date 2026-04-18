@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "ai-health-board"
+version = "1.0.0"
+description = "AI service status board for Raspberry Pi e-paper display"
+requires-python = ">=3.11"
+dependencies = [
+    "requests>=2.32.0",
+    "pillow>=10.0.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+]
+
+[tool.setuptools]
+packages = ["ai_health_board", "ai_health_board.providers", "ai_health_board.render", "ai_health_board.display"]
+package-dir = {"." = "."}
+include-package-data = true
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml", "*.png", "*.txt"]

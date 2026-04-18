@@ -1,0 +1,15 @@
+[Unit]
+Description=AI Health Status Board
+After=network.target
+
+[Service]
+Type=simple
+User=%i
+WorkingDirectory=%d/guild/ai-container/lotus-companion
+Environment="PATH=/home/%i/guild/ai-container/lotus-companion/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+ExecStart=/home/%i/guild/ai-container/lotus-companion/venv/bin/python %d/guild/ai-container/lotus-companion/app.py run --config config/providers.yaml
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

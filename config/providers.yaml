@@ -1,0 +1,38 @@
+# Refresh interval in seconds (default: 300 = 5 minutes)
+refresh_seconds: 300
+
+# Timezone for timestamp display (e.g. UTC, America/New_York)
+timezone: UTC
+
+# Display backend configuration
+display:
+  # Backend to use: "mock" (PNG output), "waveshare_2in13" (Waveshare 2.13")
+  backend: mock
+  # Display dimensions (pixels)
+  width: 250
+  height: 122
+  # Rotation in degrees (0, 90, 180, 270)
+  rotation: 90
+  # Do a full refresh every N update cycles to reduce ghosting
+  full_refresh_every_n_updates: 6
+
+# List of status providers to poll
+providers:
+  # Example: Atlassian Statuspage provider
+  - name: Claude
+    type: statuspage
+    url: https://status.claude.com/api/v2/summary.json
+    # Optional: restrict to specific components (resilient matching)
+    components:
+      - claude.ai
+      - Claude Code
+      - Claude API (api.anthropic.com)
+
+  - name: OpenAI
+    type: statuspage
+    url: https://status.openai.com/api/v2/summary.json
+    components:
+      - ChatGPT
+      - API
+      - Codex Web
+      - Codex API
