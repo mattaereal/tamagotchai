@@ -1,13 +1,14 @@
 """Waveshare 2.13" e-paper display backend."""
-import logging
-import time
-from datetime import datetime
-from typing import Any, Dict, List
 
-from PIL import Image, ImageDraw, ImageFont
+import logging
+from datetime import datetime
+from typing import Any, Dict, List, Union
+
+from PIL import Image, ImageDraw
 
 from ..display.base import DisplayBackend
-from ..models import ComponentStatus, ProviderStatus
+from ..models import ProviderStatus
+from ..config import DisplayConfig
 
 logger = logging.getLogger(__name__)
 
@@ -19,32 +20,46 @@ except Exception:
     logger.warning("waveshare_epd not installed; e-paper hardware will not work")
 
 
+def _get_display_value(
+    config: Union[DisplayConfig, Dict[str, Any]], key: str, default: Any
+) -> Any:
+    """Helper to get value from either DisplayConfig or dict."""
+    if isinstance(config, DisplayConfig):
+        return getattr(config, key, default)
+    return config.get(key, default)
+
+
 class Waveshare2in13Display(DisplayBackend):
     """Waveshare 2.13" b/w e-paper display backend."""
 
-    def __init__(self, config: Dict[str, Any]):
-        self.width = config.get("width", 250)
-        self.height = config.get("height", 122)
-        self.rotation = config.get("rotation", 90)
+    def __init__(self, config: Union[DisplayConfig, Dict[str, Any]]):
+        self._width = _get_display_value(config, "width", 250)
+        self._height = _get_display_value(config, "height", 122)
+        self.rotation = _get_display_value(config, "rotation", 0)
+
         self._epd = None
-        self._img: Image.Image = Image.new("1", (self.width, self.height), 1)
+        self._img: Image.Image = Image.new("1", (self._width, self._height), 1)
         self._draw = ImageDraw.Draw(self._img)
         self._init_display()
 
     def _init_display(self) -> None:
         if epd2in13 is None:
-            raise RuntimeError("waveshare_epd package not available")
+            raise RuntimeError(
+                "waveshare_epd package not available. "
+                "Install from: https://github.com/waveshareteam/e-Paper"
+            )
         try:
             self._epd = epd2in13.EPD()
             logger.info("EPD 2in13 init OK")
             self._epd.init()
+            self._epd.Clear(0xFF)  # Clear to white
         except Exception as e:
             logger.error(f"EPD init failed: {e}")
             raise
 
     @property
     def size(self) -> tuple[int, int]:
-        return (self.width, self.height)
+        return (self._width, self._height)
 
     @property
     def width(self) -> int:
@@ -55,7 +70,7 @@ class Waveshare2in13Display(DisplayBackend):
         return self._height
 
     def render(self, state: Dict[str, Any]) -> None:
-        self._draw.rectangle([0, 0, self.width, self.height], fill=1)
+        self._draw.rectangle([0, 0, self._width, self._height], fill=1)
         margin = 6
         line_h = 10
         start_y = 2
@@ -66,7 +81,10 @@ class Waveshare2in13Display(DisplayBackend):
         ts = state.get("last_refresh")
         if ts:
             try:
-                dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                if isinstance(ts, str):
+                    dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                else:
+                    dt = ts
                 self._draw.text(
                     (margin, start_y), dt.strftime("%Y-%m-%d %H:%M:%S"), fill=0
                 )
@@ -79,9 +97,7 @@ class Waveshare2in13Display(DisplayBackend):
             self._draw.text(
                 (margin, start_y), f"[{provider.provider_type.upper()}]", fill=0
             )
-            self._draw.text(
-                (margin + 60, start_y), provider.name, fill=0
-            )
+            self._draw.text((margin + 60, start_y), provider.name, fill=0)
             agg = provider.status.icon()
             self._draw.text((margin + 160, start_y), agg, fill=0)
             start_y += line_h
@@ -94,7 +110,7 @@ class Waveshare2in13Display(DisplayBackend):
                 self._draw.text((margin + 30, start_y), text, fill=0)
                 start_y += line_h
 
-        start_y = self.height - line_h - 2
+        start_y = self._height - line_h - 2
         footer = "last ok" if state.get("last_refresh") else "no data"
         if state.get("stale"):
             footer += " | STALE"
@@ -112,9 +128,6 @@ class Waveshare2in13Display(DisplayBackend):
         try:
             # Convert to monochrome bilevel
             mono = self._img.convert("1", dither=Image.Dither.FLOYDSTEINBERG)
-            # Rotate if landscape mode expected
-            if self.rotation == 90:
-                mono = mono.rotate(90, expand=True)
             self._epd.display(self._epd.getbuffer(mono))
             self._epd.sleep()  # Enter deep sleep to preserve power
             logger.debug("EPD frame flushed")

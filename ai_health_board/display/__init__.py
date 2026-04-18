@@ -1,6 +1,9 @@
 """Display backends."""
+
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Union
+
+from ai_health_board.config import DisplayConfig
 
 logger = logging.getLogger(__name__)
 
@@ -10,12 +13,26 @@ _BACKENDS: Dict[str, Any] = {
 }
 
 
-def get_display(config: Dict[str, Any]) -> Any:
-    """Get a display backend by name from config."""
-    backend_name = config.get("backend", "mock")
+def get_display(config: Union[DisplayConfig, Dict[str, Any]]) -> Any:
+    """Get a display backend by name from config.
+
+    Args:
+        config: Either a DisplayConfig object or a dict with display settings
+
+    Returns:
+        Instantiated display backend
+    """
+    # Handle both DisplayConfig objects and dicts
+    if isinstance(config, DisplayConfig):
+        backend_name = config.backend
+    else:
+        backend_name = config.get("backend", "mock")
+
     if backend_name not in _BACKENDS:
         available = ", ".join(_BACKENDS.keys())
-        raise ValueError(f"Unknown display backend '{backend_name}'. Available: {available}")
+        raise ValueError(
+            f"Unknown display backend '{backend_name}'. Available: {available}"
+        )
 
     module_name, class_name = _BACKENDS[backend_name].rsplit(".", 1)
     module = __import__(module_name, fromlist=[class_name])
