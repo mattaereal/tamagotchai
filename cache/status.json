@@ -1,0 +1,66 @@
+{
+  "last_refresh": "2026-04-18T02:18:56.160217+00:00",
+  "stale": false,
+  "providers": [
+    {
+      "name": "Claude",
+      "provider_type": "statuspage",
+      "status": "OK",
+      "components": [
+        {
+          "name": "claude.ai",
+          "status": "OK",
+          "upstream_status": null,
+          "failure_count": 0
+        },
+        {
+          "name": "Claude Code",
+          "status": "OK",
+          "upstream_status": null,
+          "failure_count": 0
+        },
+        {
+          "name": "Claude API (api.anthropic.com)",
+          "status": "OK",
+          "upstream_status": null,
+          "failure_count": 0
+        }
+      ],
+      "last_successful_refresh": null,
+      "consecutive_failures": 0
+    },
+    {
+      "name": "OpenAI",
+      "provider_type": "statuspage",
+      "status": "OK",
+      "components": [
+        {
+          "name": "App",
+          "status": "OK",
+          "upstream_status": null,
+          "failure_count": 0
+        },
+        {
+          "name": "Conversations",
+          "status": "OK",
+          "upstream_status": null,
+          "failure_count": 0
+        },
+        {
+          "name": "Codex Web",
+          "status": "OK",
+          "upstream_status": null,
+          "failure_count": 0
+        },
+        {
+          "name": "Codex API",
+          "status": "OK",
+          "upstream_status": null,
+          "failure_count": 0
+        }
+      ],
+      "last_successful_refresh": null,
+      "consecutive_failures": 0
+    }
+  ]
+}

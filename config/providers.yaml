@@ -31,8 +31,10 @@ providers:
   - name: OpenAI
     type: statuspage
     url: https://status.openai.com/api/v2/summary.json
+    # Component names must match the upstream Statuspage exactly
+    # (case-insensitive fallback is applied automatically)
     components:
-      - ChatGPT
-      - API
+      - App
+      - Conversations
       - Codex Web
       - Codex API

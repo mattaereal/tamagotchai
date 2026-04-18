@@ -103,12 +103,19 @@ class StatuspageProvider(StatusProvider):
 
         # If user configured specific component keys, filter to those.
         if self.component_keys:
+            # Build case-insensitive lookup for fallback matching
+            lower_map: Dict[str, str] = {name.lower(): name for name in result.keys()}
             filtered: Dict[str, ServiceStatus] = {}
             for key in self.component_keys:
                 if key in result:
                     filtered[key] = result[key]
+                elif key.lower() in lower_map:
+                    real_name = lower_map[key.lower()]
+                    filtered[key] = result[real_name]
+                    logger.debug(
+                        f"Component '{key}' matched case-insensitively to '{real_name}'"
+                    )
                 else:
-                    # Mark as UNKNOWN when explicitly configured but not found
                     filtered[key] = ServiceStatus.UNKNOWN
                     logger.warning(
                         f"Component '{key}' not found in {self.display_name()} status data"
