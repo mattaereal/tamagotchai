@@ -1,21 +1,13 @@
-# Refresh interval in seconds (default: 300 = 5 minutes)
 refresh_seconds: 30
-
-# Timezone for timestamp display (e.g. UTC, America/New_York)
 timezone: UTC
 
-# Display backend configuration
 display:
-  # Backend: "mock" (PNG file), "waveshare_2in13_v3" (Waveshare 2.13" V3 e-paper)
   backend: mock
-  # EPD native resolution (Waveshare 2.13" V3 = 122x250 portrait)
   width: 122
   height: 250
   rotation: 0
-  # Full refresh every N cycles to reduce ghosting (e-paper only)
-  full_refresh_every_n_updates: 6
+  full_refresh_every_n_updates: 50
 
-# Screen cycling configuration
 screens:
   - name: health
     type: health
@@ -30,7 +22,6 @@ screens:
       url: https://lotus.therektgames.com/health
       stats_url: https://lotus.therektgames.com/stats
 
-# List of status providers to poll (used by the health screen)
 providers:
   - name: Claude
     type: statuspage
@@ -39,6 +30,10 @@ providers:
       - claude.ai
       - Claude Code
       - Claude API (api.anthropic.com)
+    display_names:
+      claude.ai: AI
+      Claude Code: Code
+      Claude API (api.anthropic.com): API
 
   - name: OpenAI
     type: statuspage
@@ -48,8 +43,17 @@ providers:
       - Conversations
       - Codex Web
       - Codex API
+    display_names:
+      App: App
+      Conversations: Chat
+      Codex Web: Web
+      Codex API: API
 
   - name: Lotus
     type: lotus_health
     url: https://lotus.therektgames.com/health
     components: []
+    display_names:
+      Lotus: Live
+      Queue: Queue
+      Proxy: Proxy

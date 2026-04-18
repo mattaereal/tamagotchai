@@ -16,12 +16,13 @@ class DisplayBackend(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def render_image(self, img: Image.Image, full_refresh: bool = False) -> None:
+    def render_image(self, img: Image.Image) -> None:
         """Render a PIL Image directly to the display.
+
+        The backend decides internally whether to use full or partial refresh.
 
         Args:
             img: PIL Image in mode '1', sized to match display dimensions.
-            full_refresh: If True, force a full refresh (e-paper displays).
         """
         raise NotImplementedError
 

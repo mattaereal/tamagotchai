@@ -132,7 +132,7 @@ class MockPNGDisplay(DisplayBackend):
 
         self._save_png()
 
-    def render_image(self, img: Image.Image, full_refresh: bool = False) -> None:
+    def render_image(self, img: Image.Image) -> None:
         """Save a PIL Image as PNG."""
         self._img = img
         self._draw = ImageDraw.Draw(self._img)

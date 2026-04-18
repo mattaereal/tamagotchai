@@ -1,4 +1,5 @@
 """Tests for config loading."""
+
 import pytest
 import tempfile
 import os
@@ -8,6 +9,7 @@ import logging
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from ai_health_board.config import load_config, AppConfig, DisplayConfig, ProviderConfig
+
 
 def test_load_valid_config():
     """Test loading a valid configuration."""
@@ -52,6 +54,7 @@ providers:
     finally:
         os.unlink(fname)
 
+
 def test_load_config_defaults():
     """Test loading config with minimal/default values."""
     yaml_content = """
@@ -79,10 +82,13 @@ providers:
         assert cfg.display.width == 250
         assert cfg.display.height == 122
         assert cfg.display.rotation == 90
-        assert cfg.display.full_refresh_every_n_updates == 6  # default from DisplayConfig
+        assert (
+            cfg.display.full_refresh_every_n_updates == 50
+        )  # default from DisplayConfig
         assert len(cfg.providers) == 1
     finally:
         os.unlink(fname)
+
 
 def test_load_config_invalid_refresh():
     """Test that invalid refresh_seconds raises ValueError."""
@@ -104,6 +110,7 @@ providers:
     finally:
         os.unlink(fname)
 
+
 def test_load_config_no_providers(caplog):
     """Test loading config with no providers (should log warning)."""
     yaml_content = """
@@ -121,5 +128,7 @@ providers: []
         assert "No providers configured" in caplog.text
     finally:
         os.unlink(fname)
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

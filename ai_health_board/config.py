@@ -16,7 +16,7 @@ class DisplayConfig:
     width: int = 122
     height: int = 250
     rotation: int = 0
-    full_refresh_every_n_updates: int = 6
+    full_refresh_every_n_updates: int = 50
 
 
 @dataclass
@@ -25,6 +25,7 @@ class ProviderConfig:
     type: str
     url: str
     components: List[str]
+    display_names: Dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -54,7 +55,7 @@ class AppConfig:
             height=display_raw.get("height", 250),
             rotation=display_raw.get("rotation", 0),
             full_refresh_every_n_updates=display_raw.get(
-                "full_refresh_every_n_updates", 6
+                "full_refresh_every_n_updates", 50
             ),
         )
 
@@ -66,6 +67,7 @@ class AppConfig:
                     type=p_raw["type"],
                     url=p_raw["url"],
                     components=p_raw.get("components", []),
+                    display_names=p_raw.get("display_names", {}),
                 )
             )
 

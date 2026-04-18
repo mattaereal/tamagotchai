@@ -55,7 +55,7 @@ class Waveshare2in13V3Display(DisplayBackend):
         self._update_count = 0
         self._base_set = False
         self._full_refresh_every = _get_display_value(
-            config, "full_refresh_every_n_updates", 6
+            config, "full_refresh_every_n_updates", 50
         )
         self._init_display()
         self._width = self._epd.width  # 122
@@ -160,12 +160,15 @@ class Waveshare2in13V3Display(DisplayBackend):
 
         self._push_to_epaper()
 
-    def render_image(self, img: Image.Image, full_refresh: bool = False) -> None:
+    def render_image(self, img: Image.Image) -> None:
         """Render a PIL Image directly to the EPD.
+
+        Uses displayPartial() for fast updates by default.
+        Only uses displayPartBaseImage() on first render or
+        periodic ghosting cleanup (every N updates).
 
         Args:
             img: PIL Image in mode '1', sized (width, height) = (122, 250).
-            full_refresh: Force a full/base refresh (resets partial refresh base).
         """
         if self._epd is None:
             logger.warning("EPD not initialized, skipping render_image")
@@ -175,9 +178,7 @@ class Waveshare2in13V3Display(DisplayBackend):
         self._update_count += 1
 
         needs_full = (
-            full_refresh
-            or not self._base_set
-            or self._update_count % self._full_refresh_every == 0
+            not self._base_set or self._update_count % self._full_refresh_every == 0
         )
 
         try:

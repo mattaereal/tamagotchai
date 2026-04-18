@@ -1,7 +1,7 @@
-# Refresh interval in seconds (default: 300 = 5 minutes)
+# Refresh interval in seconds
 refresh_seconds: 30
 
-# Timezone for timestamp display (e.g. UTC, America/New_York)
+# Timezone for timestamp display
 timezone: UTC
 
 # Display backend configuration
@@ -12,13 +12,10 @@ display:
   width: 122
   height: 250
   rotation: 0
-  # Full refresh every N cycles to reduce ghosting (e-paper only)
-  full_refresh_every_n_updates: 6
+  # Full refresh every N cycles to clear ghosting (e-paper only, higher = fewer flashes)
+  full_refresh_every_n_updates: 50
 
 # Screen cycling configuration
-# Screens alternate on a timed rotation. Each screen has its own
-# poll_interval (how often to fetch fresh data) and display_duration
-# (how long to show the screen before cycling to the next).
 screens:
   - name: health
     type: health
@@ -33,17 +30,20 @@ screens:
       url: https://lotus.therektgames.com/health
       stats_url: https://lotus.therektgames.com/stats
 
-# List of status providers to poll (used by the health screen)
+# Status providers (used by the health screen)
+# display_names maps upstream component names to short display labels
 providers:
   - name: Claude
     type: statuspage
     url: https://status.claude.com/api/v2/summary.json
-    # Component names from the upstream Statuspage
-    # (case-insensitive fallback is applied automatically)
     components:
       - claude.ai
       - Claude Code
       - Claude API (api.anthropic.com)
+    display_names:
+      claude.ai: AI
+      Claude Code: Code
+      Claude API (api.anthropic.com): API
 
   - name: OpenAI
     type: statuspage
@@ -53,8 +53,17 @@ providers:
       - Conversations
       - Codex Web
       - Codex API
+    display_names:
+      App: App
+      Conversations: Chat
+      Codex Web: Web
+      Codex API: API
 
   - name: Lotus
     type: lotus_health
     url: https://lotus.therektgames.com/health
     components: []
+    display_names:
+      Lotus: Live
+      Queue: Queue
+      Proxy: Proxy

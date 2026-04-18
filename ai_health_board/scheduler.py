@@ -49,7 +49,7 @@ async def screen_loop(
                 if switching or screen.has_changed():
                     try:
                         img = screen.render(display.width, display.height)
-                        display.render_image(img, full_refresh=switching)
+                        display.render_image(img)
                         prev_screen_idx = i
                         logger.debug(f"Rendered screen {screen.__class__.__name__}")
                     except Exception as e:

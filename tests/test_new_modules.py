@@ -1,4 +1,4 @@
-"""Tests for new modules: LotusHealthStatus, LotusStatsData, LotusHealthProvider, screens."""
+"""Tests for new modules: LotusHealthStatus, LotusStatsData, providers, screens."""
 
 import sys
 import os
@@ -8,7 +8,15 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from ai_health_board.models import LotusHealthStatus, LotusStatsData, ServiceStatus
 from ai_health_board.providers.lotus_health import LotusHealthProvider
 from ai_health_board.providers.lotus_stats import LotusStatsProvider
-from ai_health_board.screens.health import HealthScreen
+from ai_health_board.screens.health import (
+    HealthScreen,
+    _STATUS_ICONS,
+    _make_anthropic_icon,
+    _make_openai_icon,
+    _make_lotus_icon,
+    _get_provider_icon,
+    _resolve_icon_key,
+)
 from ai_health_board.screens.tamagotchi import TamagotchiScreen
 from ai_health_board.screens import create_screens
 from ai_health_board.config import (
@@ -170,6 +178,57 @@ def test_service_status_icons():
     assert ServiceStatus.UNKNOWN.icon() == "[?]"
 
 
+# --- Pixel art icons ---
+
+
+def test_anthropic_icon():
+    icon = _make_anthropic_icon()
+    assert icon.size == (12, 12)
+    assert icon.mode == "1"
+
+
+def test_openai_icon():
+    icon = _make_openai_icon()
+    assert icon.size == (12, 12)
+    assert icon.mode == "1"
+
+
+def test_lotus_icon():
+    icon = _make_lotus_icon()
+    assert icon.size == (12, 12)
+    assert icon.mode == "1"
+
+
+def test_provider_icon_has_black_pixels():
+    for maker in [_make_anthropic_icon, _make_openai_icon, _make_lotus_icon]:
+        icon = maker()
+        extrema = icon.getextrema()
+        assert extrema == (0, 255), f"{maker.__name__} icon has no black pixels"
+
+
+def test_resolve_icon_key_claude():
+    assert _resolve_icon_key("Claude", "statuspage") == "statuspage_anthropic"
+
+
+def test_resolve_icon_key_openai():
+    assert _resolve_icon_key("OpenAI", "statuspage") == "statuspage_openai"
+
+
+def test_resolve_icon_key_lotus():
+    assert _resolve_icon_key("Lotus", "lotus_health") == "lotus_health"
+
+
+def test_get_provider_icon():
+    icon = _get_provider_icon("statuspage_anthropic")
+    assert icon is not None
+    assert icon.size == (12, 12)
+
+
+def test_get_provider_icon_unknown():
+    icon = _get_provider_icon("nonexistent")
+    assert icon is None
+
+
 # --- HealthScreen ---
 
 
@@ -198,12 +257,62 @@ def test_health_screen_has_changed_after_render():
 
 
 def test_health_screen_icons():
-    s = HealthScreen(providers=[])
-    from ai_health_board.screens.health import _STATUS_ICONS
-
     assert _STATUS_ICONS["OK"] == "[+]"
     assert _STATUS_ICONS["DOWN"] == "[-]"
     assert _STATUS_ICONS["DEGRADED"] == "[!]"
+
+
+def test_health_screen_display_names():
+    pc = ProviderConfig(
+        name="Claude",
+        type="statuspage",
+        url="http://test",
+        components=["claude.ai"],
+        display_names={"claude.ai": "AI"},
+    )
+    s = HealthScreen(providers=[pc])
+    assert s._display_name_for("claude.ai", pc) == "AI"
+    assert s._display_name_for("unknown", pc) == "unknown"
+
+
+def test_health_screen_display_names_no_config():
+    s = HealthScreen(providers=[])
+    assert s._display_name_for("claude.ai", None) == "claude.ai"
+
+
+def test_health_screen_provider_config_for():
+    pc = ProviderConfig(
+        name="Claude", type="statuspage", url="http://test", components=[]
+    )
+    s = HealthScreen(providers=[pc])
+    assert s._provider_config_for("Claude") is pc
+    assert s._provider_config_for("Nonexistent") is None
+
+
+def test_health_screen_render_with_mock_data():
+    from ai_health_board.models import AppState, ProviderStatus, ComponentStatus
+
+    pc = ProviderConfig(
+        name="Claude",
+        type="statuspage",
+        url="http://test",
+        components=["claude.ai"],
+        display_names={"claude.ai": "AI"},
+    )
+    s = HealthScreen(providers=[pc])
+    s._state = AppState(
+        last_refresh=None,
+        providers=[
+            ProviderStatus(
+                name="Claude",
+                provider_type="statuspage",
+                status=ServiceStatus.OK,
+                components=[ComponentStatus("claude.ai", ServiceStatus.OK)],
+            )
+        ],
+    )
+    img = s.render(122, 250)
+    assert img.size == (122, 250)
 
 
 # --- TamagotchiScreen ---
@@ -255,6 +364,17 @@ def test_tamagotchi_screen_stats_change():
     assert s.has_changed() is True
 
 
+def test_tamagotchi_sprite_frame_cycling():
+    s = TamagotchiScreen(url="http://test")
+    s._health = LotusHealthStatus(status="ok", proxy=True, pending=0)
+    s._stats = LotusStatsData(prs_created=5)
+    num_sprites = len(s._sprites) or 4
+    for i in range(num_sprites):
+        s._frame = i
+        img = s.render(122, 250)
+        assert img.size == (122, 250)
+
+
 # --- ScreenConfig ---
 
 
@@ -292,6 +412,73 @@ def test_create_screens_default():
     screens = create_screens(cfg)
     assert len(screens) == 1
     assert isinstance(screens[0], HealthScreen)
+
+
+# --- ProviderConfig display_names ---
+
+
+def test_provider_config_display_names():
+    pc = ProviderConfig(
+        name="Claude",
+        type="statuspage",
+        url="http://test",
+        components=["claude.ai"],
+        display_names={"claude.ai": "AI"},
+    )
+    assert pc.display_names == {"claude.ai": "AI"}
+
+
+def test_provider_config_display_names_default():
+    pc = ProviderConfig(
+        name="Test", type="statuspage", url="http://test", components=[]
+    )
+    assert pc.display_names == {}
+
+
+def test_config_from_dict_with_display_names():
+    data = {
+        "refresh_seconds": 30,
+        "display": {"backend": "mock"},
+        "providers": [
+            {
+                "name": "Claude",
+                "type": "statuspage",
+                "url": "http://test",
+                "components": ["claude.ai"],
+                "display_names": {"claude.ai": "AI"},
+            }
+        ],
+    }
+    cfg = AppConfig.from_dict(data)
+    assert cfg.providers[0].display_names == {"claude.ai": "AI"}
+
+
+# --- Demo mock injection ---
+
+
+def test_mock_health_injection():
+    s = HealthScreen(providers=[])
+    from app import _inject_mock_health
+
+    _inject_mock_health(s)
+    assert s._state is not None
+    assert len(s._state.providers) == 3
+    assert s._state.providers[0].name == "Claude"
+    img = s.render(122, 250)
+    assert img.size == (122, 250)
+
+
+def test_mock_tamagotchi_injection():
+    s = TamagotchiScreen(url="http://test")
+    from app import _inject_mock_tamagotchi
+
+    _inject_mock_tamagotchi(s)
+    assert s._health is not None
+    assert s._health.mood == "working"
+    assert s._stats is not None
+    assert s._stats.prs_created == 12
+    img = s.render(122, 250)
+    assert img.size == (122, 250)
 
 
 if __name__ == "__main__":
