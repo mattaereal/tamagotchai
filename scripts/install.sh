@@ -99,6 +99,7 @@ if $IS_PI; then
             # Enable single and double tap
             echo "set_button_enable single 1" | nc -q 0 127.0.0.1 8423 2>/dev/null && echo "  Single tap: ENABLED" || echo "  Single tap: FAILED (pisugar-server not responding?)"
             echo "set_button_enable double 1" | nc -q 0 127.0.0.1 8423 2>/dev/null && echo "  Double tap: ENABLED" || echo "  Double tap: FAILED"
+            echo "set_anti_mistouch 1" | nc -q 0 127.0.0.1 8423 2>/dev/null && echo "  Anti-mistouch: ENABLED" || echo "  Anti-mistouch: FAILED"
             # Set button shell commands
             echo "set_button_shell single 'kill -USR1 \$(cat /tmp/lotus-companion.pid)'" | nc -q 0 127.0.0.1 8423 2>/dev/null && echo "  Single tap -> next screen (SIGUSR1)" || echo "  Single tap shell: FAILED"
             echo "set_button_shell double 'kill -USR2 \$(cat /tmp/lotus-companion.pid)'" | nc -q 0 127.0.0.1 8423 2>/dev/null && echo "  Double tap -> tamagotchi (SIGUSR2)" || echo "  Double tap shell: FAILED"

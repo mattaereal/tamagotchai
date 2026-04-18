@@ -9,6 +9,7 @@ import asyncio
 import logging
 import os
 import signal
+import time as _time
 from typing import List, Optional
 
 from .screens.base import Screen
@@ -17,15 +18,18 @@ from .screens.tamagotchi import TamagotchiScreen
 logger = logging.getLogger(__name__)
 
 PID_FILE = "/tmp/lotus-companion.pid"
+_DEBOUNCE_SECONDS = 0.5
 
 
 class InputManager:
-    def __init__(self, screens: List[Screen]):
+    def __init__(self, screens: List[Screen], debounce: float = _DEBOUNCE_SECONDS):
         self._screens = screens
         self.next_screen = asyncio.Event()
         self.jump_tamagotchi = asyncio.Event()
         self._tamagotchi_idx: Optional[int] = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._debounce = debounce
+        self._last_signal_time: float = 0.0
 
         for i, s in enumerate(screens):
             if isinstance(s, TamagotchiScreen):
@@ -55,10 +59,20 @@ class InputManager:
         return self._tamagotchi_idx
 
     def _on_sigusr1(self) -> None:
+        now = _time.monotonic()
+        if now - self._last_signal_time < self._debounce:
+            logger.debug("SIGUSR1 debounced (too soon after last signal)")
+            return
+        self._last_signal_time = now
         logger.info("SIGUSR1 received -> next screen")
         self.next_screen.set()
 
     def _on_sigusr2(self) -> None:
+        now = _time.monotonic()
+        if now - self._last_signal_time < self._debounce:
+            logger.debug("SIGUSR2 debounced (too soon after last signal)")
+            return
+        self._last_signal_time = now
         logger.info("SIGUSR2 received -> jump to tamagotchi")
         self.jump_tamagotchi.set()
 

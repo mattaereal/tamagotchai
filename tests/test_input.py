@@ -91,7 +91,7 @@ def test_input_manager_cleanup_removes_pid():
 def test_sigusr1_sets_next_screen():
     sc = ScreenConfig(name="Test", template="status_board")
     screens = [StatusBoardScreen(sc)]
-    mgr = InputManager(screens)
+    mgr = InputManager(screens, debounce=0.0)
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -112,7 +112,7 @@ def test_sigusr1_sets_next_screen():
 def test_sigusr2_sets_jump_tamagotchi():
     sc = ScreenConfig(name="Test", template="status_board")
     screens = [StatusBoardScreen(sc)]
-    mgr = InputManager(screens)
+    mgr = InputManager(screens, debounce=0.0)
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -124,6 +124,32 @@ def test_sigusr2_sets_jump_tamagotchi():
         loop.call_soon_threadsafe(lambda: None)
         loop.run_until_complete(asyncio.sleep(0.05))
         assert mgr.jump_tamagotchi.is_set()
+    finally:
+        mgr.cleanup()
+        loop.close()
+        _cleanup_pid()
+
+
+def test_debounce_ignores_rapid_signals():
+    sc = ScreenConfig(name="Test", template="status_board")
+    screens = [StatusBoardScreen(sc)]
+    mgr = InputManager(screens, debounce=0.5)
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    mgr.setup(loop)
+
+    try:
+        os.kill(os.getpid(), signal.SIGUSR1)
+        loop.call_soon_threadsafe(lambda: None)
+        loop.run_until_complete(asyncio.sleep(0.02))
+        assert mgr.next_screen.is_set()
+
+        mgr.next_screen.clear()
+        os.kill(os.getpid(), signal.SIGUSR1)
+        loop.call_soon_threadsafe(lambda: None)
+        loop.run_until_complete(asyncio.sleep(0.02))
+        assert not mgr.next_screen.is_set()
     finally:
         mgr.cleanup()
         loop.close()
