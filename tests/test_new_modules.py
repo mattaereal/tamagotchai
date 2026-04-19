@@ -11,15 +11,17 @@ from ai_health_board.providers.statuspage import StatuspageProvider
 from ai_health_board.screens.status_board import (
     StatusBoardScreen,
     CategoryData,
-    _STATUS_ICONS,
+)
+from ui.assets import (
+    get_icon,
+    resolve_icon_key,
     _make_anthropic_icon,
     _make_openai_icon,
     _make_lotus_icon,
     _make_generic_icon,
-    _get_icon,
-    _resolve_icon_key,
-    _json_value_to_status,
 )
+from ui.layout import _STATUS_ICONS
+from ai_health_board.screens.status_board import _json_value_to_status
 from ai_health_board.screens.tamagotchi import TamagotchiScreen
 from ai_health_board.screens import create_screens
 from ai_health_board.config import (
@@ -140,20 +142,20 @@ def test_icon_has_black_pixels():
 
 
 def test_resolve_icon_key():
-    assert _resolve_icon_key("Claude", "statuspage") == "anthropic"
-    assert _resolve_icon_key("OpenAI", "statuspage") == "openai"
-    assert _resolve_icon_key("Lotus", "json") == "lotus"
-    assert _resolve_icon_key("Random", "statuspage") == "statuspage"
+    assert resolve_icon_key("Claude", "statuspage") == "anthropic"
+    assert resolve_icon_key("OpenAI", "statuspage") == "openai"
+    assert resolve_icon_key("Lotus", "json") == "lotus"
+    assert resolve_icon_key("Random", "statuspage") == "statuspage"
 
 
 def test_get_icon_builtin():
     for name in ["anthropic", "openai", "lotus", "generic"]:
-        icon = _get_icon(name)
+        icon = get_icon(name)
         assert icon is not None
 
 
 def test_get_icon_unknown_returns_generic():
-    icon = _get_icon("nonexistent")
+    icon = get_icon("nonexistent")
     assert icon is not None
 
 

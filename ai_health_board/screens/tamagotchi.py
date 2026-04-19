@@ -14,6 +14,9 @@ from PIL import Image, ImageDraw
 
 from .base import Screen
 from ..config import ScreenConfig, resolve_key
+from ui.canvas import Canvas
+from ui import layout, MARGIN
+from ui.assets import load_sprite
 
 logger = logging.getLogger(__name__)
 
@@ -21,21 +24,7 @@ _SPRITE_W = 90
 _SPRITE_H = 90
 
 
-def _load_sprite(path: str) -> Optional[Image.Image]:
-    if not path or not os.path.exists(path):
-        return None
-    try:
-        img = Image.open(path).convert("L")
-        resized = img.resize((_SPRITE_W, _SPRITE_H), Image.LANCZOS)
-        return resized.convert("1", dither=Image.FLOYDSTEINBERG)
-    except Exception as e:
-        logger.warning(f"Failed to load sprite {path}: {e}")
-        return None
-
-
 class TamagotchiScreen(Screen):
-    """Generic tamagotchi screen with config-driven sprites, mood, and info."""
-
     def __init__(self, config: ScreenConfig):
         self._config = config
         self._poll_interval = config.poll_interval
@@ -49,7 +38,7 @@ class TamagotchiScreen(Screen):
         if config.sprites:
             for mood_key in ("idle", "working", "error", "success"):
                 path = getattr(config.sprites, mood_key, "")
-                sprite = _load_sprite(path)
+                sprite = load_sprite(path) if path else None
                 if sprite:
                     self._sprites[mood_key] = sprite
                     logger.debug(f"Loaded sprite for {mood_key}: {path}")
@@ -99,13 +88,10 @@ class TamagotchiScreen(Screen):
             self._mood = mm.error
 
     def render(self, width: int, height: int) -> Image.Image:
-        img = Image.new("1", (width, height), 255)
-        draw = ImageDraw.Draw(img)
-        margin = 4
-        line_h = 11
+        c = Canvas(width, height)
 
-        draw.text((margin, 3), self._config.name, fill=0)
-        draw.line([(margin, 14), (width - margin, 14)], fill=0)
+        c.text((MARGIN, 3), self._config.name, fill=0)
+        c.hline(14, fill=0)
 
         sprite_y = 18
         sprite = self._sprites.get(self._mood)
@@ -115,50 +101,44 @@ class TamagotchiScreen(Screen):
                 sprite = available[self._frame % len(available)]
 
         if sprite:
-            sx = (width - _SPRITE_W) // 2
-            img.paste(sprite, (sx, sprite_y))
+            sx = (c.w - _SPRITE_W) // 2
+            c.paste(sprite, (sx, sprite_y))
         else:
-            self._draw_fallback_face(draw, width, sprite_y)
+            _draw_fallback_face(c, self._mood, sprite_y, self._frame)
 
         self._frame = (self._frame + 1) % max(len(self._sprites), 1)
 
         text_y = sprite_y + _SPRITE_H + 6
 
         if self._data.get("__fetch_error"):
-            draw.text((margin, text_y), "[-] connection error", fill=0)
-            text_y += line_h
+            c.text((MARGIN, text_y), "[-] connection error", fill=0)
         else:
             for il in self._config.info_lines:
-                if text_y + line_h > height - 14:
+                if text_y + layout.LINE_H_SMALL > height - layout.FOOTER_RESERVE:
                     break
 
                 value = self._format_info_line(il)
-                if len(value) > il.max_length:
+                if il.max_length and len(value) > il.max_length:
                     value = value[: il.max_length - 3] + "..."
-
                 label = il.label
-                if label:
-                    text = f"{label}: {value}"
-                else:
-                    text = value
+                text = f"{label}: {value}" if label else value
+                c.text((MARGIN, text_y), text, fill=0)
+                text_y += layout.LINE_H_SMALL
 
-                draw.text((margin, text_y), text, fill=0)
-                text_y += line_h
-
-        footer_y = height - line_h - 2
+        footer_y = height - layout.LINE_H - 2
         last_checked = self._data.get("__last_checked", "")
         if last_checked:
             try:
                 dt = datetime.fromisoformat(last_checked)
                 ts = dt.strftime("%H:%M:%S")
-                draw.text((margin, footer_y), f"{self._mood} | {ts}", fill=0)
+                c.text((MARGIN, footer_y), f"{self._mood} | {ts}", fill=0)
             except (ValueError, TypeError):
-                draw.text((margin, footer_y), f"mood: {self._mood}", fill=0)
+                c.text((MARGIN, footer_y), f"mood: {self._mood}", fill=0)
         else:
-            draw.text((margin, footer_y), f"mood: {self._mood}", fill=0)
+            c.text((MARGIN, footer_y), f"mood: {self._mood}", fill=0)
 
         self._last_render_data_hash = self._data_hash()
-        return img
+        return c.to_image()
 
     def _format_info_line(self, il) -> str:
         if il.template and il.keys:
@@ -167,59 +147,10 @@ class TamagotchiScreen(Screen):
                 return il.template.format(*vals)
             except (KeyError, IndexError):
                 return "?"
-
         if il.key:
             val = resolve_key(self._data, il.key, "")
             return str(val)
-
         return ""
-
-    def _draw_fallback_face(self, draw: ImageDraw.Draw, width: int, top_y: int) -> None:
-        cx = width // 2
-        cy = top_y + _SPRITE_H // 2
-        face_r = 28
-        eye_y = cy - 8
-        left_eye_x = cx - 10
-        right_eye_x = cx + 10
-
-        draw.ellipse(
-            [cx - face_r, cy - face_r, cx + face_r, cy + face_r],
-            outline=0,
-            width=1,
-        )
-
-        if self._frame % 2 == 1 and self._mood != "error":
-            draw.line(
-                [(left_eye_x - 3, eye_y), (left_eye_x + 3, eye_y)], fill=0, width=1
-            )
-            draw.line(
-                [(right_eye_x - 3, eye_y), (right_eye_x + 3, eye_y)], fill=0, width=1
-            )
-        else:
-            draw.ellipse([left_eye_x - 3, eye_y - 3, left_eye_x + 3, eye_y + 3], fill=0)
-            draw.ellipse(
-                [right_eye_x - 3, eye_y - 3, right_eye_x + 3, eye_y + 3], fill=0
-            )
-
-        mouth_y = cy + 10
-        if self._mood == "idle":
-            draw.arc(
-                [cx - 8, mouth_y - 4, cx + 8, mouth_y + 6],
-                start=0,
-                end=180,
-                fill=0,
-                width=1,
-            )
-        elif self._mood == "working":
-            draw.line([(cx - 6, mouth_y), (cx + 6, mouth_y)], fill=0, width=1)
-        else:
-            draw.arc(
-                [cx - 8, mouth_y, cx + 8, mouth_y + 10],
-                start=180,
-                end=360,
-                fill=0,
-                width=1,
-            )
 
     def has_changed(self) -> bool:
         if self._last_render_data_hash is None:
@@ -228,3 +159,37 @@ class TamagotchiScreen(Screen):
 
     def _data_hash(self) -> str:
         return str(sorted(self._data.items()))
+
+
+def _draw_fallback_face(c: Canvas, mood: str, top_y: int, frame: int) -> None:
+    cx = c.w // 2
+    cy = top_y + _SPRITE_H // 2
+    face_r = 28
+    eye_y = cy - 8
+    left_eye_x = cx - 10
+    right_eye_x = cx + 10
+
+    c.ellipse([cx - face_r, cy - face_r, cx + face_r, cy + face_r], outline=0, width=1)
+
+    if frame % 2 == 1 and mood != "error":
+        c.line([(left_eye_x - 3, eye_y), (left_eye_x + 3, eye_y)], fill=0, width=1)
+        c.line([(right_eye_x - 3, eye_y), (right_eye_x + 3, eye_y)], fill=0, width=1)
+    else:
+        c.ellipse([left_eye_x - 3, eye_y - 3, left_eye_x + 3, eye_y + 3], fill=0)
+        c.ellipse([right_eye_x - 3, eye_y - 3, right_eye_x + 3, eye_y + 3], fill=0)
+
+    mouth_y = cy + 10
+    if mood == "idle":
+        c.arc(
+            [cx - 8, mouth_y - 4, cx + 8, mouth_y + 6],
+            start=0,
+            end=180,
+            fill=0,
+            width=1,
+        )
+    elif mood == "working":
+        c.line([(cx - 6, mouth_y), (cx + 6, mouth_y)], fill=0, width=1)
+    else:
+        c.arc(
+            [cx - 8, mouth_y, cx + 8, mouth_y + 10], start=180, end=360, fill=0, width=1
+        )

@@ -10,7 +10,14 @@ logger = logging.getLogger(__name__)
 
 
 def create_screens(config: AppConfig) -> List[Screen]:
-    """Create screen instances from AppConfig."""
+    """Create screen instances from AppConfig.
+
+    Supports:
+      - status_board  -> StatusBoardScreen (live provider fetch)
+      - tamagotchi    -> TamagotchiScreen (live JSON fetch + sprites)
+      - ui:<name>     -> UiTemplateScreen (wraps any registered ui/ template)
+      - <ui name>     -> UiTemplateScreen (if name matches a ui/ template)
+    """
     screens: List[Screen] = []
 
     for sc in config.screens:
@@ -23,7 +30,13 @@ def create_screens(config: AppConfig) -> List[Screen]:
 
             screens.append(TamagotchiScreen(sc))
         else:
-            raise ValueError(f"Unknown screen template: {sc.template}")
+            from .ui_template import UiTemplateScreen
+
+            if UiTemplateScreen.is_ui_template(sc.template):
+                tpl_name = UiTemplateScreen.strip_prefix(sc.template)
+                screens.append(UiTemplateScreen(sc, tpl_name))
+            else:
+                raise ValueError(f"Unknown screen template: {sc.template}")
 
     if not screens:
         from .status_board import StatusBoardScreen

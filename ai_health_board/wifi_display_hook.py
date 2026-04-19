@@ -46,18 +46,20 @@ def show_setup_info(line1: str, line2: str, line3: str) -> None:
         return
 
     try:
-        from PIL import Image, ImageDraw
+        from ui.canvas import Canvas
+        from ui.templates.setup import render
 
-        img = Image.new("1", (display.width, display.height), 255)
-        draw = ImageDraw.Draw(img)
-
+        data = {}
         if line1 or line2 or line3:
-            y = 80
-            for line in [line1, line2, line3]:
-                if line:
-                    draw.text((10, y), line, fill=0)
-                y += 16
+            if "SSID:" in line2:
+                data["ssid"] = line2.replace("SSID: ", "").replace("SSID:", "").strip()
+            if "http" in line3:
+                data["url"] = line3.strip()
+        else:
+            data = {"ssid": "", "url": ""}
 
+        c = Canvas(display.width, display.height)
+        img = render(c, data)
         display.render_image(img)
         logger.info(f"Display hook: rendered '{line1}' / '{line2}' / '{line3}'")
     except Exception as e:

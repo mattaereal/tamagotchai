@@ -16,6 +16,7 @@ from ai_health_board.screens import create_screens
 from ai_health_board.screens.base import Screen
 from ai_health_board.screens.status_board import StatusBoardScreen, CategoryData
 from ai_health_board.screens.tamagotchi import TamagotchiScreen
+from ai_health_board.screens.ui_template import UiTemplateScreen
 from ai_health_board.scheduler import screen_loop
 from ai_health_board.input import InputManager
 from ai_health_board.models import ServiceStatus
@@ -117,6 +118,22 @@ def _demo(
             final_path = "out/frame.png"
             img.save(final_path, format="PNG")
 
+        else:
+            from ai_health_board.screens.ui_template import UiTemplateScreen
+
+            if isinstance(screen, UiTemplateScreen):
+                from ui.preview import MOCK_DATA
+
+                screen._data = MOCK_DATA.get(
+                    screen._template_name, {"name": screen._config.name}
+                )
+            img = screen.render(display.width, display.height)
+            display.render_image(img)
+            cls_name = screen.__class__.__name__
+            tpl = getattr(screen, "_template_name", "")
+            label = f"ui:{tpl}" if tpl else cls_name
+            print(f"  {label} rendered -> out/frame.png")
+
 
 def _animate_status_board(screen: StatusBoardScreen, display: DisplayBackend) -> None:
     """Animate status changes to test partial refresh."""
@@ -190,6 +207,26 @@ def main() -> None:
     )
 
     subparsers.add_parser("doctor", help="Validate configuration and environment")
+
+    ui_preview_parser = subparsers.add_parser(
+        "ui-preview", help="Render ui/ templates to PNGs"
+    )
+    ui_preview_parser.add_argument(
+        "--template",
+        "-t",
+        help="Render a single template by name (default: all)",
+    )
+    ui_preview_parser.add_argument(
+        "--output-dir",
+        "-o",
+        default="out/ui",
+        help="Output directory (default: out/ui)",
+    )
+    ui_preview_parser.add_argument(
+        "--contact-sheet",
+        action="store_true",
+        help="Also render a contact sheet grid",
+    )
 
     args = parser.parse_args()
 
@@ -279,6 +316,31 @@ def main() -> None:
             print("lotus-companion PID: NOT SET")
 
         print("\n=== End Doctor ===")
+        return
+
+    if args.command == "ui-preview":
+        from ui.preview import render_all, render_template
+        from ui.preview.contact_sheet import render_contact_sheet
+        from ui.templates import names as template_names
+        import pathlib
+
+        os.makedirs(args.output_dir, exist_ok=True)
+        if args.template:
+            print(f"Rendering template: {args.template}")
+            path = render_template(args.template, output_dir=args.output_dir)
+            print(f"  -> {path}")
+        else:
+            print(f"Rendering all templates to {args.output_dir}/")
+            paths = render_all(output_dir=args.output_dir)
+            for p in paths:
+                print(f"  {os.path.basename(p)}")
+            print(f"\n{len(paths)} template(s) rendered.")
+
+        if args.contact_sheet:
+            cs_path = os.path.join(args.output_dir, "contact_sheet.png")
+            render_contact_sheet(output_path=cs_path)
+            print(f"Contact sheet -> {cs_path}")
+
         return
 
     cfg = load_config(args.config)
