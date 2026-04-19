@@ -134,12 +134,12 @@ def test_floyd_steinberg_extremes():
 
     black = Image.new("L", (10, 10), 0)
     result = floyd_steinberg(black)
-    pixels = list(result.getdata())
+    pixels = list(result.get_flattened_data())
     assert all(p == 0 for p in pixels)
 
     white = Image.new("L", (10, 10), 255)
     result = floyd_steinberg(white)
-    pixels = list(result.getdata())
+    pixels = list(result.get_flattened_data())
     assert all(p == 255 for p in pixels)
 
 
@@ -149,7 +149,7 @@ def test_threshold_dither():
     img = Image.new("L", (50, 50), 128)
     result = threshold(img, 100)
     assert result.mode == "L"
-    pixels = list(result.getdata())
+    pixels = list(result.get_flattened_data())
     assert all(p in (0, 255) for p in pixels)
 
 
@@ -158,9 +158,9 @@ def test_threshold_dither_levels():
 
     img = Image.new("L", (10, 10), 128)
     r_low = threshold(img, 50)
-    assert all(p == 255 for p in r_low.getdata())
+    assert all(p == 255 for p in r_low.get_flattened_data())
     r_high = threshold(img, 200)
-    assert all(p == 0 for p in r_high.getdata())
+    assert all(p == 0 for p in r_high.get_flattened_data())
 
 
 def test_ordered_dither():
