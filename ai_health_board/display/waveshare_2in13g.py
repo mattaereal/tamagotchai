@@ -7,6 +7,7 @@ Resolution: 122x250.
 """
 
 import logging
+import time
 from typing import Any, Dict, Union
 
 from PIL import Image, ImageDraw
@@ -71,6 +72,7 @@ class Waveshare2in13GDisplay(DisplayBackend):
         try:
             buf = self._epd.getbuffer(img)
             self._epd.display(buf)
+            time.sleep(2)
             logger.debug("EPD full refresh (4-color, B/W only)")
         except Exception as e:
             logger.error(f"EPD render_image error: {e}", exc_info=True)
@@ -81,6 +83,7 @@ class Waveshare2in13GDisplay(DisplayBackend):
         try:
             buf = self._epd.getbuffer(self._img)
             self._epd.display(buf)
+            time.sleep(2)
         except Exception as e:
             logger.error(f"EPD flush error: {e}", exc_info=True)
 

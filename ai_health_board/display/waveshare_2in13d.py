@@ -7,6 +7,7 @@ Resolution: 104x212.
 """
 
 import logging
+import time
 from typing import Any, Dict, Union
 
 from PIL import Image, ImageDraw
@@ -94,9 +95,11 @@ class Waveshare2in13DDisplay(DisplayBackend):
                 self._epd.displayPartBaseImage(buf)
                 self._base_set = True
                 logger.debug(f"EPD full refresh (update #{self._update_count})")
+                time.sleep(2)
             else:
                 self._epd.displayPartial(buf)
                 logger.debug(f"EPD partial refresh (update #{self._update_count})")
+                time.sleep(0.3)
         except Exception as e:
             logger.error(f"EPD render_image error: {e}", exc_info=True)
 
@@ -106,6 +109,7 @@ class Waveshare2in13DDisplay(DisplayBackend):
         try:
             buf = self._epd.getbuffer(self._img)
             self._epd.displayPartBaseImage(buf)
+            time.sleep(2)
             self._base_set = True
             self._update_count += 1
         except Exception as e:

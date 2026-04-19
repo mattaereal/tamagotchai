@@ -116,13 +116,18 @@ def _inject_mock_agent_feed(screen: AgentFeedScreen) -> None:
 
 
 def _demo(
-    screens: List[Screen], display: DisplayBackend, animate: bool = False
+    screens: List[Screen],
+    display: DisplayBackend,
+    cfg: AppConfig,
+    animate: bool = False,
 ) -> None:
+    is_real_hw = cfg.display.backend != "mock"
     for screen in screens:
         if isinstance(screen, StatusBoardScreen):
             _inject_mock_status_board(screen)
             img = screen.render(display.width, display.height)
             display.render_image(img)
+            img.save("out/frame.png", format="PNG")
             print("  Status board rendered -> out/frame.png")
 
             if animate:
@@ -138,14 +143,16 @@ def _demo(
                 out_path = f"out/demo_tamagotchi_f{frame_idx + 1}.png"
                 img.save(out_path, format="PNG")
                 print(f"  Tamagotchi frame {frame_idx + 1}/{num_sprites} -> {out_path}")
-                time.sleep(0.3)
-            final_path = "out/frame.png"
-            img.save(final_path, format="PNG")
+                if is_real_hw and frame_idx == 0:
+                    time.sleep(2)
+                elif is_real_hw:
+                    time.sleep(0.5)
 
         elif isinstance(screen, AgentFeedScreen):
             _inject_mock_agent_feed(screen)
             img = screen.render(display.width, display.height)
             display.render_image(img)
+            img.save("out/frame.png", format="PNG")
             print("  Agent feed rendered -> out/frame.png")
 
         else:
@@ -279,9 +286,14 @@ def main() -> None:
     if args.command == "preview":
         display = get_display(cfg.display)
         screens = create_screens(cfg)
-        if screens:
-            img = screens[0].render(display.width, display.height)
-            display.render_image(img)
+        try:
+            if screens:
+                img = screens[0].render(display.width, display.height)
+                display.render_image(img)
+                os.makedirs("out", exist_ok=True)
+                img.save("out/frame.png", format="PNG")
+        finally:
+            display.close()
         print("Preview rendered to out/frame.png")
         return
 
@@ -290,15 +302,20 @@ def main() -> None:
         screens = create_screens(cfg)
         os.makedirs("out", exist_ok=True)
         print("Demo mode: rendering with mock data (no network)")
-        _demo(screens, display, animate=getattr(args, "animate", False))
+        try:
+            _demo(screens, display, cfg=cfg, animate=getattr(args, "animate", False))
+        finally:
+            display.close()
         print("Demo complete. Check out/ for rendered frames.")
         return
 
     if args.command == "once":
         display = get_display(cfg.display)
         screens = create_screens(cfg)
-        asyncio.run(_run_once(screens, display))
-        display.close()
+        try:
+            asyncio.run(_run_once(screens, display))
+        finally:
+            display.close()
         return
 
     if args.command == "run":

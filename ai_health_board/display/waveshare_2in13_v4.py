@@ -10,6 +10,7 @@ Resolution: 122x250, B/W, supports partial refresh + fast mode.
 """
 
 import logging
+import time
 from typing import Any, Dict, Union
 
 from PIL import Image, ImageDraw
@@ -101,13 +102,16 @@ class Waveshare2in13V4Display(DisplayBackend):
                 self._epd.displayPartBaseImage(buf)
                 self._base_set = True
                 logger.debug(f"EPD full refresh (update #{self._update_count})")
+                time.sleep(2)
             elif self._use_fast and hasattr(self._epd, "display_fast"):
                 self._epd.init_fast()
                 self._epd.display_fast(buf)
                 logger.debug(f"EPD fast refresh (update #{self._update_count})")
+                time.sleep(0.3)
             else:
                 self._epd.displayPartial(buf)
                 logger.debug(f"EPD partial refresh (update #{self._update_count})")
+                time.sleep(0.3)
         except Exception as e:
             logger.error(f"EPD render_image error: {e}", exc_info=True)
 
@@ -117,6 +121,7 @@ class Waveshare2in13V4Display(DisplayBackend):
         try:
             buf = self._epd.getbuffer(self._img)
             self._epd.displayPartBaseImage(buf)
+            time.sleep(2)
             self._base_set = True
             self._update_count += 1
         except Exception as e:

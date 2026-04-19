@@ -6,6 +6,7 @@ Partial refresh: displayPartBaseImage() for full, displayPartial() for fast upda
 """
 
 import logging
+import time
 from datetime import datetime
 from typing import Any, Dict, List, Union
 
@@ -186,9 +187,11 @@ class Waveshare2in13V3Display(DisplayBackend):
                 self._epd.displayPartBaseImage(buf)
                 self._base_set = True
                 logger.debug(f"EPD full refresh (update #{self._update_count})")
+                time.sleep(2)
             else:
                 self._epd.displayPartial(buf)
                 logger.debug(f"EPD partial refresh (update #{self._update_count})")
+                time.sleep(0.3)
         except Exception as e:
             logger.error(f"EPD render_image error: {e}", exc_info=True)
 
