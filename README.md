@@ -10,13 +10,21 @@ A Python appliance for Raspberry Pi that polls AI service status endpoints and r
 - Retains last known state on fetch failures (marked STALE)
 - Runs as a systemd service with auto-restart
 
-## Supported hardware
+## Hardware
 
-| Hardware | Notes |
-|----------|-------|
-| Raspberry Pi Zero 2 W, Pi 3, Pi 4, Pi 5 | With SPI enabled |
-| Waveshare 2.13" V3 e-paper (black/white) | 122x250 pixels, SPI interface |
-| Any laptop | Mock mode outputs PNG files |
+| | Component | Specs |
+|---|---|---|
+| <img src="img/pi-zero-2w.webp" width="120"> | [Raspberry Pi Zero 2 W](https://www.mercadolibre.com.ar/raspberry-pi-zero-2w-made-in-uk/p/MLA35340704) | 1GHz quad-core Cortex-A53, 512MB RAM, WiFi + BT |
+| <img src="img/epaper-213.webp" width="120"> | [Waveshare 2.13" e-Paper HAT+ V3](https://www.mercadolibre.com.ar/modulo-pantalla-epaper-213-hat-para-raspberry-pi--esp32/up/MLAU3363923079) | 122x250px, black/white, SPI, partial refresh |
+| <img src="img/pisugar-s.webp" width="120"> | [PiSugar S 1200mAh](https://articulo.mercadolibre.com.ar/MLA-1550119923-pisugar-s-portable-1200-mah-ups-bateria-de-litio-pwnagothi-_JM) | Battery + UPS, onboard button (GPIO3), micro USB charge |
+
+### Assembly
+
+1. Stack **PiSugar S** onto the Pi Zero 2 W (bottom connector, align USB ports)
+2. Seat the **e-Paper HAT** onto the 40-pin GPIO header
+3. Insert microSD with Raspberry Pi OS, power via PiSugar's USB port
+
+No soldering, no extra cables.
 
 ## Quick start: laptop (mock mode)
 
@@ -80,19 +88,12 @@ Log out and back in for group changes to take effect.
 
 ### Step 5: Deploy the application
 
-From your development machine:
-```bash
-scp -r ai-health-board pi@raspberrypi.local:~/
-```
-
 On the Pi:
 ```bash
-cd ~/ai-health-board
-
-# venv MUST include --system-site-packages to access lgpio, spidev, waveshare_epd
-python3 -m venv --system-site-packages venv
-source venv/bin/activate
-pip install -r requirements.txt
+cd ~
+git clone https://github.com/mattaereal/compainon.git lotus-companion
+cd lotus-companion
+./scripts/install.sh
 ```
 
 ### Step 6: Configure for e-paper display
@@ -129,28 +130,26 @@ python app.py once
 
 You should see the e-paper display update with the status dashboard.
 
-### Step 9: Install as systemd service
+### Step 9: Install as systemd services
 
-Edit `systemd/ai-health-board.service` if your username or path differs from `pi` / `/home/pi/ai-health-board`.
+The install script auto-detects your repo path and username, so the services work regardless of where you cloned:
 
 ```bash
-sudo cp systemd/ai-health-board.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable ai-health-board
-sudo systemctl start ai-health-board
+sudo ./scripts/install_services.sh
 ```
 
-The service file already sets `GPIOZERO_PIN_FACTORY=lgpio`.
+This deploys both `ai-health-board` (main app) and `pisugar-button` (button daemon). Re-run after `git pull` to update paths.
 
 View logs:
 ```bash
 sudo journalctl -u ai-health-board -f
+sudo journalctl -u pisugar-button -f
 ```
 
 Stop/restart:
 ```bash
-sudo systemctl stop ai-health-board
 sudo systemctl restart ai-health-board
+sudo systemctl restart pisugar-button
 ```
 
 ## CLI reference
