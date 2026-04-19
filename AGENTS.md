@@ -123,11 +123,10 @@ Important (on Pi):
 
 Installing the button daemon:
 ```bash
-sudo cp systemd/pisugar-button.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable pisugar-button
-sudo systemctl start pisugar-button
+sudo ./scripts/install_services.sh
 ```
+
+This script detects your repo path and username, generates both service files with correct absolute paths, and deploys them. Re-run after `git pull` to update paths.
 
 View logs: `sudo journalctl -u pisugar-button -f`
 

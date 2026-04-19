@@ -4,7 +4,10 @@ After=multi-user.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 %h/lotus-companion/scripts/pisugar_button.py
+# NOTE: This is a template. Paths and User are set by scripts/install_services.sh
+User=__USER__
+Group=__USER__
+ExecStart=/usr/bin/python3 __REPO_DIR__/scripts/pisugar_button.py
 Environment=GPIOZERO_PIN_FACTORY=lgpio
 Restart=on-failure
 RestartSec=5
