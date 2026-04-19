@@ -1,0 +1,4 @@
+# Tamagotchai application settings.
+
+refresh_seconds: 30
+timezone: UTC

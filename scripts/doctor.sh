@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${SCRIPT_DIR}/.."
 
-echo "=== AI Health Board – Doctor ==="
+echo "=== Tamagotchai Doctor ==="
 echo ""
 
 ERRORS=0
@@ -38,10 +38,10 @@ else
 fi
 
 # Config
-if [[ -f "config/providers.yaml" ]]; then
+if [[ -f "config/display.yml" ]] && [[ -f "config/tamagotchai.yml" ]] && [[ -f "config/screens.yml" ]]; then
     echo "Config: OK"
 else
-    echo "Config: MISSING (cp config/providers.yaml.example config/providers.yaml)"
+    echo "Config: INCOMPLETE (run: python app.py init)"
     ((WARNINGS++))
 fi
 
@@ -57,7 +57,7 @@ fi
 # aiohttp
 echo -n "aiohttp: "
 if python3 -c "import aiohttp; print(aiohttp.__version__)" 2>/dev/null; then
-    : # version printed above
+    :
 else
     echo "MISSING (pip install aiohttp)"
     ((ERRORS++))
@@ -145,25 +145,24 @@ if $IS_PI; then
 
     # Waveshare driver
     echo ""
-    echo -n "waveshare_epd V3: "
-    if python3 -c "from waveshare_epd import epd2in13_V3; print('OK')" 2>/dev/null; then
-        echo "INSTALLED"
-    else
-        echo "NOT INSTALLED"
-        echo "  git clone https://github.com/waveshareteam/e-Paper.git"
-        echo "  cd e-Paper/RaspberryPi_JetsonNano/python"
-        echo "  sudo apt install -y python3-setuptools"
-        echo "  sudo python3 setup.py install"
-        ((WARNINGS++))
-    fi
+    for ver in "V3:epd2in13_V3" "V4:epd2in13_V4" "V2:epd2in13_V2" "V1:epd2in13"; do
+        LABEL="${ver%%:*}"
+        MOD="${ver##*:}"
+        echo -n "waveshare_epd ${LABEL}: "
+        if python3 -c "from waveshare_epd import ${MOD}; print('INSTALLED')" 2>/dev/null; then
+            :
+        else
+            echo "NOT INSTALLED"
+        fi
+    done
 
     # Config backend check
     echo ""
-    if [[ -f "config/providers.yaml" ]]; then
-        BACKEND=$(python3 -c "import yaml; c=yaml.safe_load(open('config/providers.yaml')); print(c.get('display',{}).get('backend','mock'))" 2>/dev/null || echo "unknown")
+    if [[ -f "config/display.yml" ]]; then
+        BACKEND=$(python3 -c "import yaml; c=yaml.safe_load(open('config/display.yml')); print(c.get('backend','mock'))" 2>/dev/null || echo "unknown")
         echo "Config backend: $BACKEND"
         if [[ "$BACKEND" == "mock" ]] && $SPI_FOUND; then
-            echo "  [HINT] SPI is available – change backend to 'waveshare_2in13_v3' for e-paper"
+            echo "  [HINT] SPI is available – change backend to a waveshare driver for e-paper"
             ((WARNINGS++))
         fi
     fi

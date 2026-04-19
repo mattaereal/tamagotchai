@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Main entrypoint for the AI health board application."""
+"""Tamagotchai - AI status companion for Raspberry Pi e-paper displays."""
 
 import asyncio
 import logging
@@ -21,6 +21,9 @@ from ai_health_board.scheduler import screen_loop
 from ai_health_board.input import InputManager
 from ai_health_board.models import ServiceStatus
 
+APP_NAME = "tamagotchai"
+PID_FILE = f"/tmp/{APP_NAME}.pid"
+
 logger = logging.getLogger(__name__)
 
 
@@ -39,7 +42,6 @@ async def _run_once(screens: List[Screen], display: DisplayBackend) -> None:
 
 
 def _inject_mock_status_board(screen: StatusBoardScreen) -> None:
-    """Inject mock data into a status board screen."""
     screen._categories = [
         CategoryData(
             "Claude",
@@ -73,7 +75,6 @@ def _inject_mock_status_board(screen: StatusBoardScreen) -> None:
 
 
 def _inject_mock_tamagotchi(screen: TamagotchiScreen) -> None:
-    """Inject mock data into a tamagotchi screen."""
     screen._data = {
         "status": "ok",
         "proxy": True,
@@ -93,7 +94,6 @@ def _inject_mock_tamagotchi(screen: TamagotchiScreen) -> None:
 def _demo(
     screens: List[Screen], display: DisplayBackend, animate: bool = False
 ) -> None:
-    """Render each screen with mock data."""
     for screen in screens:
         if isinstance(screen, StatusBoardScreen):
             _inject_mock_status_board(screen)
@@ -119,8 +119,6 @@ def _demo(
             img.save(final_path, format="PNG")
 
         else:
-            from ai_health_board.screens.ui_template import UiTemplateScreen
-
             if isinstance(screen, UiTemplateScreen):
                 from ui.preview import MOCK_DATA
 
@@ -129,17 +127,14 @@ def _demo(
                 )
             img = screen.render(display.width, display.height)
             display.render_image(img)
-            cls_name = screen.__class__.__name__
             tpl = getattr(screen, "_template_name", "")
-            label = f"ui:{tpl}" if tpl else cls_name
+            label = f"ui:{tpl}" if tpl else screen.__class__.__name__
             print(f"  {label} rendered -> out/frame.png")
 
 
 def _animate_status_board(screen: StatusBoardScreen, display: DisplayBackend) -> None:
-    """Animate status changes to test partial refresh."""
     print("  Animating status changes (partial refresh)...")
 
-    # Claude API -> DEGRADED
     for cat in screen._categories:
         if cat.name == "Claude":
             cat.items["API"] = ServiceStatus.DEGRADED
@@ -150,7 +145,6 @@ def _animate_status_board(screen: StatusBoardScreen, display: DisplayBackend) ->
     print("    Claude API -> [!] DEGRADED")
     time.sleep(2)
 
-    # OpenAI App -> DOWN
     for cat in screen._categories:
         if cat.name == "OpenAI":
             cat.items["App"] = ServiceStatus.DOWN
@@ -161,7 +155,6 @@ def _animate_status_board(screen: StatusBoardScreen, display: DisplayBackend) ->
     print("    OpenAI App -> [-] DOWN")
     time.sleep(2)
 
-    # Restore all
     for cat in screen._categories:
         for key in list(cat.items.keys()):
             cat.items[key] = ServiceStatus.OK
@@ -177,14 +170,21 @@ def main() -> None:
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="AI health status board for Raspberry Pi e-paper display"
+        description=f"{APP_NAME} - AI status companion for e-paper displays"
     )
     parser.add_argument(
         "--config",
-        default="config/providers.yaml",
-        help="Path to providers YAML config",
+        default="config",
+        help="Config directory (default: config)",
     )
     subparsers = parser.add_subparsers(dest="command", help="Command to run")
+
+    init_parser = subparsers.add_parser("init", help="Interactive setup wizard")
+    init_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite existing config files without asking",
+    )
 
     run_parser = subparsers.add_parser("run", help="Run as a long-running service")
     run_parser.add_argument(
@@ -212,9 +212,7 @@ def main() -> None:
         "ui-preview", help="Render ui/ templates to PNGs"
     )
     ui_preview_parser.add_argument(
-        "--template",
-        "-t",
-        help="Render a single template by name (default: all)",
+        "--template", "-t", help="Render a single template by name (default: all)"
     )
     ui_preview_parser.add_argument(
         "--output-dir",
@@ -223,9 +221,7 @@ def main() -> None:
         help="Output directory (default: out/ui)",
     )
     ui_preview_parser.add_argument(
-        "--contact-sheet",
-        action="store_true",
-        help="Also render a contact sheet grid",
+        "--contact-sheet", action="store_true", help="Also render a contact sheet grid"
     )
 
     args = parser.parse_args()
@@ -234,113 +230,18 @@ def main() -> None:
 
     setup_logging()
 
+    if args.command == "init":
+        from commands.init import run_init
+
+        run_init(config_dir=args.config, force=args.force)
+        return
+
     if args.command == "doctor":
-        import platform
-
-        print("=== Doctor Check ===")
-        print(f"Python: {platform.python_version()}")
-        try:
-            cfg = load_config(args.config)
-            print(f"Config: loaded ({len(cfg.screens)} screen(s))")
-        except Exception as e:
-            print(f"Config: ERROR - {e}")
-            sys.exit(1)
-
-        try:
-            import ai_health_board
-
-            print("Imports: OK")
-        except Exception as e:
-            print(f"Imports: FAIL - {e}")
-
-        try:
-            import aiohttp
-
-            print(f"aiohttp: {aiohttp.__version__}")
-        except ImportError:
-            print("aiohttp: MISSING")
-
-        gpio_factory = os.environ.get("GPIOZERO_PIN_FACTORY", "")
-        print(f"GPIOZERO_PIN_FACTORY: {gpio_factory or 'NOT SET'}")
-        if not gpio_factory:
-            print("  Set: export GPIOZERO_PIN_FACTORY=lgpio")
-
-        print("")
-        for d in ["/dev/spidev0.0", "/dev/spidev0.1"]:
-            print(f"SPI device: {d} - {'EXISTS' if os.path.exists(d) else 'NOT FOUND'}")
-
-        try:
-            import lgpio
-
-            print(f"\nlgpio: {lgpio.__version__}")
-        except ImportError:
-            print("\nlgpio: MISSING (sudo apt install python3-lgpio)")
-
-        try:
-            from waveshare_epd import epd2in13_V3
-
-            print("waveshare_epd V3: INSTALLED")
-        except ImportError:
-            print("waveshare_epd V3: NOT INSTALLED")
-
-        try:
-            import subprocess
-
-            result = subprocess.run(
-                ["pgrep", "-x", "pisugar-server"],
-                capture_output=True,
-                text=True,
-            )
-            if result.returncode == 0:
-                print("pisugar-server: RUNNING")
-            else:
-                print("pisugar-server: NOT RUNNING")
-        except Exception:
-            print("pisugar-server: UNKNOWN")
-
-        try:
-            sock_path = "/tmp/pisugar-server.sock"
-            if os.path.exists(sock_path):
-                print(f"PiSugar socket: {sock_path} EXISTS")
-            else:
-                print("PiSugar socket: NOT FOUND")
-        except Exception:
-            pass
-
-        pid_file = "/tmp/lotus-companion.pid"
-        if os.path.exists(pid_file):
-            with open(pid_file) as f:
-                pid = f.read().strip()
-            print(f"lotus-companion PID: {pid}")
-        else:
-            print("lotus-companion PID: NOT SET")
-
-        print("\n=== End Doctor ===")
+        _doctor(args.config)
         return
 
     if args.command == "ui-preview":
-        from ui.preview import render_all, render_template
-        from ui.preview.contact_sheet import render_contact_sheet
-        from ui.templates import names as template_names
-        import pathlib
-
-        os.makedirs(args.output_dir, exist_ok=True)
-        if args.template:
-            print(f"Rendering template: {args.template}")
-            path = render_template(args.template, output_dir=args.output_dir)
-            print(f"  -> {path}")
-        else:
-            print(f"Rendering all templates to {args.output_dir}/")
-            paths = render_all(output_dir=args.output_dir)
-            for p in paths:
-                print(f"  {os.path.basename(p)}")
-            print(f"\n{len(paths)} template(s) rendered.")
-
-        if args.contact_sheet:
-            cs_path = os.path.join(args.output_dir, "contact_sheet.png")
-            render_contact_sheet(output_path=cs_path)
-            print(f"Contact sheet -> {cs_path}")
-
+        _ui_preview(args)
         return
 
     cfg = load_config(args.config)
@@ -395,6 +296,114 @@ def main() -> None:
 
     parser.print_help()
     sys.exit(1)
+
+
+def _doctor(config_dir: str) -> None:
+    import platform
+
+    print(f"=== {APP_NAME} Doctor ===")
+    print(f"Python: {platform.python_version()}")
+
+    try:
+        cfg = load_config(config_dir)
+        print(
+            f"Config: loaded ({len(cfg.screens)} screen(s), backend={cfg.display.backend})"
+        )
+    except Exception as e:
+        print(f"Config: ERROR - {e}")
+        sys.exit(1)
+
+    try:
+        import ai_health_board
+
+        print("Imports: OK")
+    except Exception as e:
+        print(f"Imports: FAIL - {e}")
+
+    try:
+        import aiohttp
+
+        print(f"aiohttp: {aiohttp.__version__}")
+    except ImportError:
+        print("aiohttp: MISSING")
+
+    gpio_factory = os.environ.get("GPIOZERO_PIN_FACTORY", "")
+    print(f"GPIOZERO_PIN_FACTORY: {gpio_factory or 'NOT SET'}")
+    if not gpio_factory:
+        print("  Set: export GPIOZERO_PIN_FACTORY=lgpio")
+
+    print("")
+    for d in ["/dev/spidev0.0", "/dev/spidev0.1"]:
+        print(f"SPI device: {d} - {'EXISTS' if os.path.exists(d) else 'NOT FOUND'}")
+
+    try:
+        import lgpio
+
+        print(f"\nlgpio: {lgpio.__version__}")
+    except ImportError:
+        print("\nlgpio: MISSING (sudo apt install python3-lgpio)")
+
+    for ver in ("V3", "V2", "V4", "V1"):
+        try:
+            mod_name = f"epd2in13_{ver.lower()}" if ver != "V1" else "epd2in13"
+            __import__("waveshare_epd." + mod_name, fromlist=[mod_name])
+            print(f"waveshare_epd {ver}: INSTALLED")
+            break
+        except ImportError:
+            print(f"waveshare_epd {ver}: NOT INSTALLED")
+
+    try:
+        import subprocess
+
+        result = subprocess.run(
+            ["pgrep", "-x", "pisugar-server"], capture_output=True, text=True
+        )
+        if result.returncode == 0:
+            print("pisugar-server: RUNNING")
+        else:
+            print("pisugar-server: NOT RUNNING")
+    except Exception:
+        print("pisugar-server: UNKNOWN")
+
+    try:
+        sock_path = "/tmp/pisugar-server.sock"
+        if os.path.exists(sock_path):
+            print(f"PiSugar socket: {sock_path} EXISTS")
+        else:
+            print("PiSugar socket: NOT FOUND")
+    except Exception:
+        pass
+
+    if os.path.exists(PID_FILE):
+        with open(PID_FILE) as f:
+            pid = f.read().strip()
+        print(f"{APP_NAME} PID: {pid}")
+    else:
+        print(f"{APP_NAME} PID: NOT SET")
+
+    print(f"\n=== End Doctor ===")
+
+
+def _ui_preview(args) -> None:
+    from ui.preview import render_all, render_template
+    from ui.preview.contact_sheet import render_contact_sheet
+
+    os.makedirs(args.output_dir, exist_ok=True)
+    if args.template:
+        print(f"Rendering template: {args.template}")
+        path = render_template(args.template, output_dir=args.output_dir)
+        print(f"  -> {path}")
+    else:
+        print(f"Rendering all templates to {args.output_dir}/")
+        paths = render_all(output_dir=args.output_dir)
+        for p in paths:
+            print(f"  {os.path.basename(p)}")
+        print(f"\n{len(paths)} template(s) rendered.")
+
+    if args.contact_sheet:
+        cs_path = os.path.join(args.output_dir, "contact_sheet.png")
+        render_contact_sheet(output_path=cs_path)
+        print(f"Contact sheet -> {cs_path}")
 
 
 if __name__ == "__main__":

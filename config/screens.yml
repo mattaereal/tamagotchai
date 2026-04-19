@@ -1,14 +1,3 @@
-refresh_seconds: 30
-timezone: UTC
-
-display:
-  # backend: waveshare_2in13_v3
-  backend: mock
-  width: 122
-  height: 250
-  rotation: 0
-  full_refresh_every_n_updates: 50
-
 screens:
   - name: AI Health
     template: status_board

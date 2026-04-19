@@ -309,30 +309,53 @@ def test_config_info_line_backward_compat():
 
 
 def test_load_config_yaml():
-    yaml_content = """
-refresh_seconds: 30
-display:
-  backend: mock
-screens:
-  - name: Test
-    template: status_board
-    categories:
-      - name: Foo
-        url: http://test
-        type: json
-        items:
-          - key: status
-            label: Live
-"""
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-        f.write(yaml_content)
-        fname = f.name
-    try:
-        cfg = load_config(fname)
+    with tempfile.TemporaryDirectory() as td:
+        display_yml = os.path.join(td, "display.yml")
+        app_yml = os.path.join(td, "tamagotchai.yml")
+        screens_yml = os.path.join(td, "screens.yml")
+
+        with open(display_yml, "w") as f:
+            f.write("backend: mock\n")
+        with open(app_yml, "w") as f:
+            f.write("refresh_seconds: 30\ntimezone: UTC\n")
+        with open(screens_yml, "w") as f:
+            f.write(
+                "screens:\n"
+                "  - name: Test\n"
+                "    template: status_board\n"
+                "    categories:\n"
+                "      - name: Foo\n"
+                "        url: http://test\n"
+                "        type: json\n"
+                "        items:\n"
+                "          - key: status\n"
+                "            label: Live\n"
+            )
+
+        cfg = load_config(td)
         assert len(cfg.screens) == 1
         assert cfg.screens[0].categories[0].type == "json"
-    finally:
-        os.unlink(fname)
+        assert cfg.display.backend == "mock"
+        assert cfg.refresh_seconds == 30
+
+
+def test_load_config_missing_dir():
+    try:
+        load_config("/nonexistent/path")
+        assert False, "Should have raised FileNotFoundError"
+    except FileNotFoundError:
+        pass
+
+
+def test_load_config_partial():
+    with tempfile.TemporaryDirectory() as td:
+        with open(os.path.join(td, "display.yml"), "w") as f:
+            f.write("backend: waveshare_2in13_v3\n")
+        cfg = load_config(td)
+        assert cfg.display.backend == "waveshare_2in13_v3"
+        assert cfg.display.width == 122
+        assert cfg.display.height == 250
+        assert len(cfg.screens) == 0
 
 
 # --- StatusBoardScreen ---

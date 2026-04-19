@@ -1,14 +1,17 @@
-# AI Health Status Board
+# Tamagotchai
 
-A Python appliance for Raspberry Pi that polls AI service status endpoints and renders a dashboard on a 2.13" e-paper display.
+AI status companion for Raspberry Pi e-paper displays. Polls service endpoints and renders a multi-screen dashboard -- status boards, tamagotchi agents, and more.
 
 ## What it does
 
-- Polls public status endpoints (Atlassian Statuspage) every 5 minutes
-- Renders a monochrome dashboard on a Waveshare 2.13" V3 e-paper display
+- Polls public status endpoints (Atlassian Statuspage, raw JSON) on configurable intervals
+- Renders monochrome screens on Waveshare 2.13" e-paper displays (V1-V4, plus color variants)
 - Shows per-component status: OK / DEGRADED / DOWN / UNKNOWN
+- Tamagotchi screens with sprites, mood mapping, and live agent stats
+- Built-in ui/ template system with boot, setup, idle, error, and message screens
 - Retains last known state on fetch failures (marked STALE)
 - Runs as a systemd service with auto-restart
+- Interactive setup wizard (`python app.py init`)
 
 ## Hardware
 
@@ -32,7 +35,7 @@ No soldering, no extra cables.
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-cp config/providers.yaml.example config/providers.yaml
+python app.py init        # Interactive setup wizard
 python app.py preview
 # See: ./out/frame.png
 ```
@@ -91,25 +94,24 @@ Log out and back in for group changes to take effect.
 On the Pi:
 ```bash
 cd ~
-git clone https://github.com/mattaereal/compainon.git lotus-companion
-cd lotus-companion
+git clone https://github.com/mattaereal/compainon.git tamagotchai
+cd tamagotchai
 ./scripts/install.sh
 ```
 
 ### Step 6: Configure for e-paper display
 
+Run the setup wizard:
 ```bash
-cp config/providers.yaml.example config/providers.yaml
+python app.py init
 ```
 
-Edit `config/providers.yaml` and change the display backend:
-
+Or manually edit `config/display.yml`:
 ```yaml
-display:
-  backend: waveshare_2in13_v3  # was: mock
+backend: waveshare_2in13_v3  # was: mock
 ```
 
-The `width: 122` and `height: 250` values match the EPD's native portrait resolution. The driver auto-rotates landscape images. Leave them as-is.
+Width and height are auto-set from the backend profile. No need to set them manually.
 
 ### Step 7: Set GPIO pin factory
 
@@ -138,17 +140,17 @@ The install script auto-detects your repo path and username, so the services wor
 sudo ./scripts/install_services.sh
 ```
 
-This deploys both `ai-health-board` (main app) and `pisugar-button` (button daemon). Re-run after `git pull` to update paths.
+This deploys both `tamagotchai` (main app) and `pisugar-button` (button daemon). Re-run after `git pull` to update paths.
 
 View logs:
 ```bash
-sudo journalctl -u ai-health-board -f
+sudo journalctl -u tamagotchai -f
 sudo journalctl -u pisugar-button -f
 ```
 
 Stop/restart:
 ```bash
-sudo systemctl restart ai-health-board
+sudo systemctl restart tamagotchai
 sudo systemctl restart pisugar-button
 ```
 
@@ -158,7 +160,7 @@ The `wifi/` subsystem provides a captive-portal Wi-Fi setup -- no keyboard or sc
 
 **How it works:**
 1. On boot, waits up to 45s for an existing Wi-Fi connection
-2. If no Wi-Fi, creates an open hotspot (`AI-BOARD-SETUP`)
+2. If no Wi-Fi, creates an open hotspot (`TAMAGOTCHAI-SETUP`)
 3. User connects phone to the hotspot, opens `http://10.42.0.1`
 4. Selects a network, enters password, taps Connect
 5. Pi connects and the hotspot shuts down automatically
@@ -185,85 +187,62 @@ See `wifi/docs/wifi-setup.md` for full documentation.
 ## CLI reference
 
 ```bash
-python app.py doctor                       # Check environment and dependencies
-python app.py preview                      # Render to PNG (mock mode, no hardware)
-python app.py once                         # Fetch + render once, then exit
-python app.py run                          # Long-running poll loop
-python app.py run --once-after 30          # Wait 30s before first refresh
+python app.py init                          # Interactive setup wizard
+python app.py doctor                        # Check environment and dependencies
+python app.py preview                       # Render to PNG (mock mode, no hardware)
+python app.py demo                          # Render with mock data (no network)
+python app.py demo --animate                # Animate status changes
+python app.py ui-preview                    # Preview all ui/ templates
+python app.py once                          # Fetch + render once, then exit
+python app.py run                           # Long-running poll loop
+python app.py run --once-after 30           # Wait 30s before first refresh
 ```
 
 ## Configuration
 
-All configuration is in `config/providers.yaml`.
+Configuration is split across three files in `config/`:
+
+| File | Purpose |
+|---|---|
+| `display.yml` | Display hardware (backend, resolution, refresh settings) |
+| `tamagotchai.yml` | App-level settings (refresh interval, timezone) |
+| `screens.yml` | Screen definitions (status boards, tamagotchis) |
+
+### display.yml
 
 ```yaml
-refresh_seconds: 300              # Poll interval (default: 300 = 5 min)
-timezone: UTC                     # Timestamp timezone
-
-display:
-  backend: waveshare_2in13_v3     # "mock" or "waveshare_2in13_v3"
-  width: 122                      # EPD native portrait width
-  height: 250                     # EPD native portrait height
-  full_refresh_every_n_updates: 6 # Full refresh to reduce ghosting
-
-providers:
-  - name: Claude
-    type: statuspage
-    url: https://status.claude.com/api/v2/summary.json
-    components:
-      - claude.ai
-      - Claude Code
-      - Claude API (api.anthropic.com)
-
-  - name: OpenAI
-    type: statuspage
-    url: https://status.openai.com/api/v2/summary.json
-    components:
-      - App
-      - Conversations
-      - Codex Web
-      - Codex API
+backend: waveshare_2in13_v3     # See supported backends below
+rotation: 0
+full_refresh_every_n_updates: 50
 ```
 
-Component name matching:
-1. Exact match
-2. Case-insensitive fallback
-3. Not found -> UNKNOWN (logged as warning)
+Supported backends:
 
-## Adding a new provider adapter
+| Backend | Display | Resolution | Partial refresh |
+|---|---|---|---|
+| `mock` | PNG file output | 122x250 | N/A |
+| `waveshare_2in13_v1` | V1 (B/W) | 122x250 | Yes (LUT swap) |
+| `waveshare_2in13_v2` | V2 (B/W) | 122x250 | Yes |
+| `waveshare_2in13_v3` | V3 (B/W) | 122x250 | Yes |
+| `waveshare_2in13_v4` | V4 (B/W, fast refresh) | 122x250 | Yes |
+| `waveshare_2in13bc` | BC (B/W/R, 104x212) | 104x212 | No |
+| `waveshare_2in13b_v3` | B V3 (B/W/R) | 122x250 | No |
+| `waveshare_2in13b_v4` | B V4 (B/W/R) | 122x250 | No |
+| `waveshare_2in13d` | D (B/W, flexible, 104x212) | 104x212 | Yes |
+| `waveshare_2in13g` | G (4-color) | 122x250 | No |
 
-1. Create `ai_health_board/providers/custom.py`
-2. Implement `StatusProvider` base class with `__init__(display_name, url, component_keys)`
-3. Register in `ai_health_board/providers/__init__.py` `_BACKENDS` dict
-4. Add entries to `config/providers.yaml` with `type: custom`
+Width/height are auto-set from the backend profile and usually don't need to be specified.
 
-Example:
+### tamagotchai.yml
 
-```python
-from ai_health_board.providers.base import StatusProvider, ServiceStatus
-from typing import Any, Dict
-
-class CustomProvider(StatusProvider):
-    def __init__(self, display_name: str, url: str, component_keys: list):
-        self._display_name = display_name
-        self.url = url
-        self.component_keys = component_keys
-
-    def provider_type(self) -> str:
-        return "custom"
-
-    def display_name(self) -> str:
-        return self._display_name
-
-    async def fetch_status(self, session, timeout=10) -> Dict[str, Any]:
-        import aiohttp
-        resp = await session.get(self.url, timeout=aiohttp.ClientTimeout(total=timeout))
-        resp.raise_for_status()
-        return await resp.json()
-
-    def normalize(self, raw: Dict[str, Any]) -> Dict[str, ServiceStatus]:
-        return {"service_name": ServiceStatus.OK}
+```yaml
+refresh_seconds: 30
+timezone: UTC
 ```
+
+### screens.yml
+
+See `config/screens.yml.example` for the full annotated config with both templates.
 
 ## Troubleshooting
 
@@ -287,10 +266,6 @@ You are on Trixie/Bookworm which removed the sysfs GPIO interface. Set:
 export GPIOZERO_PIN_FACTORY=lgpio
 ```
 
-### `KeyError: 24` or `FileNotFoundError: /sys/class/gpio/gpio24/value`
-
-Same root cause as above. The sysfs GPIO interface is gone on Trixie. Install `python3-lgpio` and set `GPIOZERO_PIN_FACTORY=lgpio`.
-
 ### Display not updating
 
 Check in order:
@@ -298,27 +273,25 @@ Check in order:
 # 1. SPI enabled?
 ls /dev/spidev0.0
 
-# 2. Waveshare V3 driver installed?
+# 2. Waveshare driver installed?
 python3 -c "from waveshare_epd import epd2in13_V3; print('OK')"
 
 # 3. GPIO pin factory set?
 echo $GPIOZERO_PIN_FACTORY   # should print: lgpio
 
 # 4. Config backend correct?
-grep backend config/providers.yaml   # should be: waveshare_2in13_v3
+python3 -c "import yaml; print(yaml.safe_load(open('config/display.yml')).get('backend'))"
 
 # 5. User in correct groups?
 groups   # should include spi and gpio
 
 # 6. Test with mock first:
-#    Set backend: mock in config, then: python app.py preview
+#    Set backend: mock in config/display.yml, then: python app.py preview
 ```
 
 ### venv can't find lgpio / spidev / waveshare_epd
 
-The venv was created without `--system-site-packages`. These packages are installed at the system level via `apt` or `sudo python3 setup.py install`. The venv needs access to them.
-
-Fix:
+The venv was created without `--system-site-packages`. Fix:
 ```bash
 rm -rf venv
 python3 -m venv --system-site-packages venv
@@ -326,40 +299,14 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### `ModuleNotFoundError: No module named 'setuptools'` (during waveshare install)
-
-```bash
-sudo apt install python3-setuptools
-```
-
-### OpenAI components showing UNKNOWN
-
-Component names must match the upstream Statuspage. As of 2026, OpenAI uses these names:
-- `App` (not "ChatGPT")
-- `Conversations` (not "API")
-- `Codex Web`
-- `Codex API`
-
-Run this to see current names:
-```bash
-curl -s https://status.openai.com/api/v2/summary.json | python3 -c "import json,sys; [print(f'  {c[\"name\"]}') for c in json.load(sys.stdin)['components']]"
-```
-
-## Security notes
-
-- Outbound-only HTTP polling -- no inbound network services
-- No secrets or API keys required for public status endpoints
-- SSH keys recommended for deployment
-- Runs as unprivileged user (must be in `spi` and `gpio` groups)
-- No database, no web framework
-
 ## Development
 
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-python -m pytest tests/ -v
+python app.py init           # Generate config
+python -m pytest tests/ -v   # Run tests
 ```
 
 ## License

@@ -1,21 +1,6 @@
-# Refresh interval in seconds
-refresh_seconds: 30
+# Screen definitions for the e-paper display.
+# Each screen uses a template and cycles in the scheduler.
 
-# Timezone for timestamp display
-timezone: UTC
-
-# Display backend configuration
-display:
-  # backend: waveshare_2in13_v3
-  backend: mock
-  width: 122
-  height: 250
-  rotation: 0
-  # Full refresh every N cycles to clear ghosting (e-paper only)
-  full_refresh_every_n_updates: 50
-
-# Screen definitions - each screen uses a template
-# Templates: status_board, tamagotchi
 screens:
   # --- status_board: category/bullet status display ---
   # Category types:
@@ -74,7 +59,6 @@ screens:
   # info_lines: each line extracts from JSON via key or template+keys
   #   - key: single field, dot-notation (e.g. "status" or "data.health")
   #   - template + keys: positional format (e.g. "+{0} M{1}" with keys: [prs_created, prs_merged])
-  # You can have multiple tamagotchi screens for different agents
   - name: Lotus
     template: tamagotchi
     poll_interval: 5

@@ -25,9 +25,7 @@ def _get_display():
         from ai_health_board.config import load_config
         from ai_health_board.display import get_display
 
-        config = load_config(
-            os.path.join(os.path.dirname(__file__), "..", "config", "providers.yaml")
-        )
+        config = load_config(os.path.join(os.path.dirname(__file__), "..", "config"))
         _DISPLAY = get_display(config.display)
         return _DISPLAY
     except Exception as e:

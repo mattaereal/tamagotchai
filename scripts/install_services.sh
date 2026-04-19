@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # install_services.sh - Generate and install systemd services with correct paths
-# Run from inside the lotus-companion repo directory.
+# Run from inside the tamagotchai repo directory.
 # Usage: sudo ./scripts/install_services.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -15,7 +15,7 @@ if [[ -z "$ACTUAL_USER" || "$ACTUAL_USER" == "root" ]]; then
 fi
 ACTUAL_HOME="$(eval echo ~${ACTUAL_USER})"
 
-echo "=== Lotus Companion Service Installer ==="
+echo "=== Tamagotchai Service Installer ==="
 echo "Repo:   ${REPO_DIR}"
 echo "User:   ${ACTUAL_USER}"
 echo "Home:   ${ACTUAL_HOME}"
@@ -24,7 +24,7 @@ echo ""
 # Validate repo directory
 if [[ ! -f "${REPO_DIR}/app.py" ]]; then
     echo "[ERROR] Cannot find app.py in ${REPO_DIR}"
-    echo "  Run this script from inside the lotus-companion repo."
+    echo "  Run this script from inside the tamagotchai repo."
     exit 1
 fi
 
@@ -32,7 +32,7 @@ fi
 if [[ ! -f "${REPO_DIR}/venv/bin/python" ]]; then
     echo "[WARNING] venv not found at ${REPO_DIR}/venv/"
     echo "  Run ./scripts/install.sh first to create the venv."
-    echo "  The ai-health-board service will fail until the venv exists."
+    echo "  The tamagotchai service will fail until the venv exists."
     echo ""
 fi
 
@@ -53,26 +53,19 @@ else
     echo "System packages: OK"
 fi
 
-# Detect config path
-CONFIG_PATH="${REPO_DIR}/config/providers.yaml"
-if [[ ! -f "$CONFIG_PATH" ]]; then
-    if [[ -f "${REPO_DIR}/config/providers.yaml.example" ]]; then
-        echo "[WARNING] config/providers.yaml not found."
-        echo "  Copying from example..."
-        cp "${REPO_DIR}/config/providers.yaml.example" "$CONFIG_PATH"
-        echo "  -> Edit ${CONFIG_PATH} before running."
-    else
-        echo "[ERROR] No config file found."
-        exit 1
-    fi
+# Detect config directory
+CONFIG_DIR="${REPO_DIR}/config"
+if [[ ! -f "${CONFIG_DIR}/display.yml" ]]; then
+    echo "[WARNING] config/display.yml not found."
+    echo "  Run 'python app.py init' to generate config files."
 fi
 
 echo ""
-echo "--- Generating ai-health-board.service ---"
+echo "--- Generating tamagotchai.service ---"
 
-cat > /tmp/ai-health-board.service <<EOF
+cat > /tmp/tamagotchai.service <<EOF
 [Unit]
-Description=AI Health Status Board
+Description=Tamagotchai - AI Status Companion
 After=network.target
 
 [Service]
@@ -83,7 +76,7 @@ WorkingDirectory=${REPO_DIR}
 Environment="PATH=${REPO_DIR}/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 Environment="PYTHONUNBUFFERED=1"
 Environment="GPIOZERO_PIN_FACTORY=lgpio"
-ExecStart=${REPO_DIR}/venv/bin/python ${REPO_DIR}/app.py run --config ${CONFIG_PATH}
+ExecStart=${REPO_DIR}/venv/bin/python ${REPO_DIR}/app.py run --config ${CONFIG_DIR}
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
@@ -143,7 +136,7 @@ StandardError=journal
 
 Environment=WIFI_SETUP_BOOT_TIMEOUT=45
 Environment=WIFI_SETUP_IDLE_TIMEOUT=600
-Environment=WIFI_SETUP_HOTSPOT_SSID=AI-BOARD-SETUP
+Environment=WIFI_SETUP_HOTSPOT_SSID=TAMAGOTCHAI-SETUP
 Environment=WIFI_SETUP_HOTSPOT_IP=10.42.0.1
 Environment=WIFI_SETUP_WEB_PORT=80
 Environment=WIFI_SETUP_DISPLAY_HOOK=ai_health_board.wifi_display_hook
@@ -177,7 +170,7 @@ StandardError=journal
 
 Environment=WIFI_SETUP_BOOT_TIMEOUT=45
 Environment=WIFI_SETUP_IDLE_TIMEOUT=600
-Environment=WIFI_SETUP_HOTSPOT_SSID=AI-BOARD-SETUP
+Environment=WIFI_SETUP_HOTSPOT_SSID=TAMAGOTCHAI-SETUP
 Environment=WIFI_SETUP_HOTSPOT_IP=10.42.0.1
 Environment=WIFI_SETUP_WEB_PORT=80
 Environment=WIFI_SETUP_DISPLAY_HOOK=ai_health_board.wifi_display_hook
@@ -195,9 +188,9 @@ fi
 
 echo "--- Installing services ---"
 
-install -m 644 /tmp/ai-health-board.service /etc/systemd/system/ai-health-board.service
+install -m 644 /tmp/tamagotchai.service /etc/systemd/system/tamagotchai.service
 install -m 644 /tmp/pisugar-button.service /etc/systemd/system/pisugar-button.service
-rm -f /tmp/ai-health-board.service /tmp/pisugar-button.service
+rm -f /tmp/tamagotchai.service /tmp/pisugar-button.service
 
 if [[ -n "$WIFI_SERVICES" ]]; then
     install -m 644 /tmp/wifi-setup.service /etc/systemd/system/wifi-setup.service
@@ -210,13 +203,12 @@ systemctl daemon-reload
 echo ""
 echo "--- Enabling services ---"
 
-systemctl enable ai-health-board pisugar-button $WIFI_SERVICES
+systemctl enable tamagotchai pisugar-button $WIFI_SERVICES
 
 echo ""
 echo "--- Starting services ---"
 
-# Restart if already running, start if not
-systemctl restart ai-health-board 2>/dev/null || systemctl start ai-health-board
+systemctl restart tamagotchai 2>/dev/null || systemctl start tamagotchai
 systemctl restart pisugar-button 2>/dev/null || systemctl start pisugar-button
 for svc in $WIFI_SERVICES; do
     systemctl restart "$svc" 2>/dev/null || systemctl start "$svc"
@@ -226,7 +218,7 @@ echo ""
 echo "=== Done ==="
 echo ""
 echo "Installed services:"
-echo "  ai-health-board  -> ${REPO_DIR}/app.py run"
+echo "  tamagotchai      -> ${REPO_DIR}/app.py run"
 echo "  pisugar-button   -> ${REPO_DIR}/scripts/pisugar_button.py"
 if [[ -n "$WIFI_SERVICES" ]]; then
 echo "  wifi-setup       -> ${WIFI_DIR}/provisioning/ (auto-fallback)"
@@ -234,19 +226,19 @@ echo "  wifi-setup-trigger -> ${WIFI_DIR}/provisioning/ (trigger file only)"
 fi
 echo ""
 echo "Status:"
-systemctl --no-pager status ai-health-board pisugar-button $WIFI_SERVICES 2>/dev/null || true
+systemctl --no-pager status tamagotchai pisugar-button $WIFI_SERVICES 2>/dev/null || true
 echo ""
 echo "View logs:"
-echo "  sudo journalctl -u ai-health-board -f"
+echo "  sudo journalctl -u tamagotchai -f"
 echo "  sudo journalctl -u pisugar-button -f"
 if [[ -n "$WIFI_SERVICES" ]]; then
 echo "  sudo journalctl -u wifi-setup -f"
 fi
 echo ""
 echo "Stop / restart:"
-echo "  sudo systemctl restart ai-health-board"
+echo "  sudo systemctl restart tamagotchai"
 echo "  sudo systemctl restart pisugar-button"
-echo "  sudo systemctl stop ai-health-board pisugar-button"
+echo "  sudo systemctl stop tamagotchai pisugar-button"
 if [[ -n "$WIFI_SERVICES" ]]; then
 echo "  sudo systemctl restart wifi-setup"
 fi

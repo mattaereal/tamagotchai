@@ -2,7 +2,7 @@
 """PiSugar S button daemon -- GPIO3 direct input.
 
 Listens on GPIO3 (pin 5) with pull-up and debounce.
-- Short press: log + call handle_short_press() placeholder
+- Short press: send SIGUSR1 to tamagotchi (next screen)
 - Long press (>= 1.2s): attempt shutdown screen, then sudo shutdown -h now
 
 Run on Pi only. Requires: python3-gpiozero, GPIOZERO_PIN_FACTORY=lgpio
@@ -23,11 +23,10 @@ logger = logging.getLogger("pisugar_button")
 
 LONG_PRESS_SECONDS = 1.2
 POLL_INTERVAL = 0.05
-PID_FILE = "/tmp/lotus-companion.pid"
+PID_FILE = "/tmp/tamagotchai.pid"
 
 
 def handle_short_press():
-    """Placeholder for short-press behavior. Will be wired to screen cycling."""
     logger.info("SHORT PRESS detected")
     try:
         if os.path.exists(PID_FILE):
@@ -35,15 +34,14 @@ def handle_short_press():
                 pid = f.read().strip()
             if pid.isdigit():
                 os.kill(int(pid), signal.SIGUSR1)
-                logger.info(f"Sent SIGUSR1 to lotus-companion (PID {pid})")
+                logger.info(f"Sent SIGUSR1 to tamagotchai (PID {pid})")
                 return
     except (OSError, ProcessLookupError) as e:
-        logger.warning(f"Could not signal lotus-companion: {e}")
-    logger.info("No lotus-companion process to signal")
+        logger.warning(f"Could not signal tamagotchai: {e}")
+    logger.info("No tamagotchai process to signal")
 
 
 def handle_long_press():
-    """Show shutdown screen on e-paper, then shut down."""
     logger.info("LONG PRESS detected -> shutting down")
     try:
         subprocess.run(

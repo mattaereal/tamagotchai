@@ -10,4 +10,4 @@ if [[ -d "venv" ]]; then
     source venv/bin/activate
 fi
 
-exec python app.py once --config config/providers.yaml
+exec python app.py once --config config

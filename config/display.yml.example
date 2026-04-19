@@ -1,0 +1,24 @@
+# Display hardware configuration.
+# The 'backend' key selects the display driver.
+# Width/height are auto-set from the backend profile if omitted.
+
+# For development (renders to PNG files):
+backend: mock
+
+# For Raspberry Pi with Waveshare 2.13" e-paper:
+# backend: waveshare_2in13_v1   # V1 (B/W, 122x250)
+# backend: waveshare_2in13_v2   # V2 (B/W, 122x250)
+# backend: waveshare_2in13_v3   # V3 (B/W, 122x250)
+# backend: waveshare_2in13_v4   # V4 (B/W, 122x250, fast refresh)
+# backend: waveshare_2in13bc    # BC (B/W/R, 104x212, no partial refresh)
+# backend: waveshare_2in13b_v3  # B V3 (B/W/R, 122x250, no partial refresh)
+# backend: waveshare_2in13b_v4  # B V4 (B/W/R, 122x250, no partial refresh)
+# backend: waveshare_2in13d     # D (B/W, 104x212, flexible)
+# backend: waveshare_2in13g     # G (4-color, 122x250, no partial refresh)
+
+# Override resolution (usually auto-detected from backend):
+# width: 122
+# height: 250
+
+# rotation: 0
+# full_refresh_every_n_updates: 50

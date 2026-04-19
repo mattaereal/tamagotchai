@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${SCRIPT_DIR}/.."
 
-echo "=== AI Health Board – Installer ==="
+echo "=== Tamagotchai Installer ==="
 
 IS_PI=false
 if grep -q "Raspberry Pi" /proc/device-tree/model 2>/dev/null || grep -q "raspberrypi" /etc/hostname 2>/dev/null; then
@@ -15,15 +15,12 @@ fi
 if [[ ! -d "venv" ]]; then
     echo "Creating virtual environment..."
     if $IS_PI; then
-        # On Pi: need --system-site-packages to access lgpio, spidev, RPi.GPIO
-        # installed via apt (python3-lgpio python3-spidev python3-rpi.gpio)
         python3 -m venv --system-site-packages venv
     else
         python3 -m venv venv
     fi
 else
     echo "Virtual environment already exists."
-    # Warn if on Pi but venv was created without --system-site-packages
     if $IS_PI; then
         if ! grep -q "system-site-packages = true" venv/pyvenv.cfg 2>/dev/null; then
             echo "[WARNING] venv was created without --system-site-packages."
@@ -90,7 +87,7 @@ if $IS_PI; then
     echo "  export GPIOZERO_PIN_FACTORY=lgpio"
     echo "  (Add to ~/.bashrc or set in systemd service)"
 
-    # PiSugar button daemon (GPIO3 direct input)
+    # PiSugar button daemon
     echo ""
     echo "=== PiSugar Button Daemon ==="
     if python3 -c "from gpiozero import Button" 2>/dev/null; then
@@ -110,15 +107,11 @@ if $IS_PI; then
     echo "  sudo systemctl disable pisugar-server 2>/dev/null"
 fi
 
-# Copy example config if missing
-if [[ ! -f "config/providers.yaml" ]]; then
+# Run init wizard if no config exists
+if [[ ! -f "config/display.yml" ]] || [[ ! -f "config/screens.yml" ]]; then
     echo ""
-    echo "Copying example config..."
-    cp config/providers.yaml.example config/providers.yaml
-    echo "  -> Edit config/providers.yaml before running"
-    if $IS_PI; then
-        echo "  -> Change display.backend from 'mock' to 'waveshare_2in13_v3'"
-    fi
+    echo "Config files not found. Running setup wizard..."
+    python app.py init
 else
     echo "Config already exists."
 fi
@@ -132,18 +125,14 @@ echo "  python app.py preview"
 echo ""
 if $IS_PI; then
     echo "On Pi with e-paper display:"
-    echo "  1. Edit config/providers.yaml: set display.backend to 'waveshare_2in13_v3'"
+    echo "  1. Edit config/display.yml: set backend to your display version"
     echo "  2. export GPIOZERO_PIN_FACTORY=lgpio"
     echo "  3. python app.py once"
     echo ""
     echo "Install systemd services:"
-    echo "  sudo cp systemd/ai-health-board.service /etc/systemd/system/"
-    echo "  sudo cp systemd/pisugar-button.service /etc/systemd/system/"
-    echo "  sudo systemctl daemon-reload"
-    echo "  sudo systemctl enable ai-health-board pisugar-button"
-    echo "  sudo systemctl start ai-health-board pisugar-button"
+    echo "  sudo ./scripts/install_services.sh"
     echo ""
     echo "View logs:"
-    echo "  sudo journalctl -u ai-health-board -f"
+    echo "  sudo journalctl -u tamagotchai -f"
     echo "  sudo journalctl -u pisugar-button -f"
 fi

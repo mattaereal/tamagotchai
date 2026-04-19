@@ -1,5 +1,5 @@
 [Unit]
-Description=AI Health Status Board
+Description=Tamagotchai - AI Status Companion
 After=network.target
 
 [Service]
@@ -11,7 +11,7 @@ WorkingDirectory=__REPO_DIR__
 Environment="PATH=__REPO_DIR__/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 Environment="PYTHONUNBUFFERED=1"
 Environment="GPIOZERO_PIN_FACTORY=lgpio"
-ExecStart=__REPO_DIR__/venv/bin/python __REPO_DIR__/app.py run --config __REPO_DIR__/config/providers.yaml
+ExecStart=__REPO_DIR__/venv/bin/python __REPO_DIR__/app.py run --config __REPO_DIR__/config
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal

@@ -17,7 +17,7 @@ from .screens.tamagotchi import TamagotchiScreen
 
 logger = logging.getLogger(__name__)
 
-PID_FILE = "/tmp/lotus-companion.pid"
+PID_FILE = "/tmp/tamagotchai.pid"
 _DEBOUNCE_SECONDS = 0.5
 
 
