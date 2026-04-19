@@ -4,6 +4,8 @@
 import asyncio
 import logging
 import os
+import platform
+import subprocess
 import sys
 import time
 from datetime import datetime, timezone
@@ -26,6 +28,18 @@ APP_NAME = "tamagotchai"
 PID_FILE = f"/tmp/{APP_NAME}.pid"
 
 logger = logging.getLogger(__name__)
+
+
+def _show_images(paths: List[str]) -> None:
+    opener = "open" if platform.system() == "Darwin" else "xdg-open"
+    for path in paths:
+        try:
+            subprocess.Popen(
+                [opener, path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+        except FileNotFoundError:
+            print(f"  [WARN] {opener} not found; open manually: {path}")
+            break
 
 
 async def _run_once(screens: List[Screen], display: DisplayBackend) -> None:
@@ -120,18 +134,23 @@ def _demo(
     display: DisplayBackend,
     cfg: AppConfig,
     animate: bool = False,
-) -> None:
+) -> List[str]:
     is_real_hw = cfg.display.backend != "mock"
-    for screen in screens:
+    output_paths: List[str] = []
+
+    for idx, screen in enumerate(screens):
         if isinstance(screen, StatusBoardScreen):
             _inject_mock_status_board(screen)
             img = screen.render(display.width, display.height)
             display.render_image(img)
-            img.save("out/frame.png", format="PNG")
-            print("  Status board rendered -> out/frame.png")
+            out_path = f"out/demo_status_board_{screen._config.name.lower().replace(' ', '_')}.png"
+            img.save(out_path, format="PNG")
+            output_paths.append(out_path)
+            print(f"  Status board ({screen._config.name}) -> {out_path}")
 
             if animate:
-                _animate_status_board(screen, display)
+                anim_paths = _animate_status_board(screen, display)
+                output_paths.extend(anim_paths)
 
         elif isinstance(screen, TamagotchiScreen):
             _inject_mock_tamagotchi(screen)
@@ -140,9 +159,12 @@ def _demo(
                 screen._frame = frame_idx
                 img = screen.render(display.width, display.height)
                 display.render_image(img)
-                out_path = f"out/demo_tamagotchi_f{frame_idx + 1}.png"
+                out_path = f"out/demo_tamagotchi_{screen._config.name.lower().replace(' ', '_')}_f{frame_idx + 1}.png"
                 img.save(out_path, format="PNG")
-                print(f"  Tamagotchi frame {frame_idx + 1}/{num_sprites} -> {out_path}")
+                output_paths.append(out_path)
+                print(
+                    f"  Tamagotchi {screen._config.name} frame {frame_idx + 1}/{num_sprites} -> {out_path}"
+                )
                 if is_real_hw and frame_idx == 0:
                     time.sleep(2)
                 elif is_real_hw:
@@ -152,8 +174,10 @@ def _demo(
             _inject_mock_agent_feed(screen)
             img = screen.render(display.width, display.height)
             display.render_image(img)
-            img.save("out/frame.png", format="PNG")
-            print("  Agent feed rendered -> out/frame.png")
+            out_path = f"out/demo_agent_feed_{screen._config.name.lower().replace(' ', '_')}.png"
+            img.save(out_path, format="PNG")
+            output_paths.append(out_path)
+            print(f"  Agent feed ({screen._config.name}) -> {out_path}")
 
         else:
             if isinstance(screen, UiTemplateScreen):
@@ -166,11 +190,20 @@ def _demo(
             display.render_image(img)
             tpl = getattr(screen, "_template_name", "")
             label = f"ui:{tpl}" if tpl else screen.__class__.__name__
-            print(f"  {label} rendered -> out/frame.png")
+            safe_name = label.replace(":", "_").replace(" ", "_")
+            out_path = f"out/demo_{safe_name}.png"
+            img.save(out_path, format="PNG")
+            output_paths.append(out_path)
+            print(f"  {label} -> {out_path}")
+
+    return output_paths
 
 
-def _animate_status_board(screen: StatusBoardScreen, display: DisplayBackend) -> None:
+def _animate_status_board(
+    screen: StatusBoardScreen, display: DisplayBackend
+) -> List[str]:
     print("  Animating status changes (partial refresh)...")
+    output_paths: List[str] = []
 
     for cat in screen._categories:
         if cat.name == "Claude":
@@ -178,8 +211,10 @@ def _animate_status_board(screen: StatusBoardScreen, display: DisplayBackend) ->
     screen._last_render_hash = None
     img = screen.render(display.width, display.height)
     display.render_image(img)
-    img.save("out/demo_health_degraded.png", format="PNG")
-    print("    Claude API -> [!] DEGRADED")
+    out_path = "out/demo_status_degraded.png"
+    img.save(out_path, format="PNG")
+    output_paths.append(out_path)
+    print(f"    Claude API -> [!] DEGRADED -> {out_path}")
     time.sleep(2)
 
     for cat in screen._categories:
@@ -188,8 +223,10 @@ def _animate_status_board(screen: StatusBoardScreen, display: DisplayBackend) ->
     screen._last_render_hash = None
     img = screen.render(display.width, display.height)
     display.render_image(img)
-    img.save("out/demo_health_down.png", format="PNG")
-    print("    OpenAI App -> [-] DOWN")
+    out_path = "out/demo_status_down.png"
+    img.save(out_path, format="PNG")
+    output_paths.append(out_path)
+    print(f"    OpenAI App -> [-] DOWN -> {out_path}")
     time.sleep(2)
 
     for cat in screen._categories:
@@ -198,9 +235,79 @@ def _animate_status_board(screen: StatusBoardScreen, display: DisplayBackend) ->
     screen._last_render_hash = None
     img = screen.render(display.width, display.height)
     display.render_image(img)
-    img.save("out/demo_health_ok.png", format="PNG")
-    print("    All -> [+] OK")
+    out_path = "out/demo_status_ok.png"
+    img.save(out_path, format="PNG")
+    output_paths.append(out_path)
+    print(f"    All -> [+] OK -> {out_path}")
     time.sleep(1)
+
+    return output_paths
+
+
+def _demo_ui_templates(output_dir: str = "out") -> List[str]:
+    from ui.preview import render_template
+    from ui import templates
+
+    output_paths: List[str] = []
+    for name in templates.names():
+        path = render_template(name, output_dir=output_dir)
+        out_path = os.path.join(output_dir, f"demo_ui_{name}.png")
+        os.rename(path, out_path)
+        output_paths.append(out_path)
+        print(f"  ui:{name} -> {out_path}")
+    return output_paths
+
+
+def _demo_contact_sheet(
+    paths: List[str], output_path: str = "out/demo_contact_sheet.png"
+) -> str:
+    from PIL import Image
+
+    images = []
+    for p in paths:
+        try:
+            images.append(Image.open(p))
+        except Exception:
+            continue
+
+    if not images:
+        raise RuntimeError("No images to compose into contact sheet")
+
+    scale = 2
+    cols = 4
+    rows = (len(images) + cols - 1) // cols
+    gap = 4
+    label_h = 10
+
+    sample_w, sample_h = images[0].size
+    cell_w = sample_w * scale + gap
+    cell_h = sample_h * scale + gap + label_h
+
+    sheet_w = cols * cell_w + gap
+    sheet_h = rows * cell_h + gap
+
+    sheet = Image.new("1", (sheet_w, sheet_h), 255)
+
+    from PIL import ImageDraw, ImageFont
+
+    draw = ImageDraw.Draw(sheet)
+
+    for i, img in enumerate(images):
+        col = i % cols
+        row = i // cols
+        x = gap + col * cell_w
+        y = gap + row * cell_h
+
+        resized = img.resize((sample_w * scale, sample_h * scale), Image.NEAREST)
+        sheet.paste(resized, (x, y))
+
+        basename = os.path.basename(paths[i]).replace(".png", "").replace("demo_", "")
+        label_y = y + sample_h * scale + 1
+        draw.text((x, label_y), basename, fill=0)
+
+    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+    sheet.save(output_path, format="PNG")
+    return output_path
 
 
 def main() -> None:
@@ -232,7 +339,15 @@ def main() -> None:
     )
 
     subparsers.add_parser("once", help="Perform one refresh cycle and exit")
-    subparsers.add_parser("preview", help="Render a single PNG without hardware")
+
+    preview_parser = subparsers.add_parser(
+        "preview", help="Render a single PNG without hardware"
+    )
+    preview_parser.add_argument(
+        "--show",
+        action="store_true",
+        help="Open rendered image in system viewer",
+    )
 
     demo_parser = subparsers.add_parser(
         "demo", help="Render each screen with mock data (no network needed)"
@@ -241,6 +356,21 @@ def main() -> None:
         "--animate",
         action="store_true",
         help="Animate status changes to test partial refresh",
+    )
+    demo_parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Also render all ui/ templates (boot, idle, error, etc.)",
+    )
+    demo_parser.add_argument(
+        "--contact-sheet",
+        action="store_true",
+        help="Generate a contact sheet grid of all rendered screens",
+    )
+    demo_parser.add_argument(
+        "--show",
+        action="store_true",
+        help="Open rendered images in system viewer",
     )
 
     subparsers.add_parser("doctor", help="Validate configuration and environment")
@@ -259,6 +389,11 @@ def main() -> None:
     )
     ui_preview_parser.add_argument(
         "--contact-sheet", action="store_true", help="Also render a contact sheet grid"
+    )
+    ui_preview_parser.add_argument(
+        "--show",
+        action="store_true",
+        help="Open rendered images in system viewer",
     )
 
     args = parser.parse_args()
@@ -286,15 +421,18 @@ def main() -> None:
     if args.command == "preview":
         display = get_display(cfg.display)
         screens = create_screens(cfg)
+        out_path = "out/preview.png"
         try:
             if screens:
                 img = screens[0].render(display.width, display.height)
                 display.render_image(img)
                 os.makedirs("out", exist_ok=True)
-                img.save("out/frame.png", format="PNG")
+                img.save(out_path, format="PNG")
         finally:
             display.close()
-        print("Preview rendered to out/frame.png")
+        print(f"Preview rendered to {out_path}")
+        if getattr(args, "show", False):
+            _show_images([out_path])
         return
 
     if args.command == "demo":
@@ -303,10 +441,25 @@ def main() -> None:
         os.makedirs("out", exist_ok=True)
         print("Demo mode: rendering with mock data (no network)")
         try:
-            _demo(screens, display, cfg=cfg, animate=getattr(args, "animate", False))
+            output_paths = _demo(
+                screens, display, cfg=cfg, animate=getattr(args, "animate", False)
+            )
         finally:
             display.close()
-        print("Demo complete. Check out/ for rendered frames.")
+
+        if getattr(args, "all", False):
+            print("\nRendering ui/ templates...")
+            ui_paths = _demo_ui_templates()
+            output_paths.extend(ui_paths)
+
+        if getattr(args, "contact_sheet", False):
+            cs_path = _demo_contact_sheet(output_paths)
+            output_paths.append(cs_path)
+            print(f"\nContact sheet -> {cs_path}")
+
+        print(f"\nDemo complete. {len(output_paths)} frame(s) rendered to out/")
+        if getattr(args, "show", False):
+            _show_images(output_paths)
         return
 
     if args.command == "once":
@@ -346,10 +499,10 @@ def main() -> None:
 
 
 def _doctor(config_dir: str) -> None:
-    import platform
+    import platform as _platform
 
     print(f"=== {APP_NAME} Doctor ===")
-    print(f"Python: {platform.python_version()}")
+    print(f"Python: {_platform.python_version()}")
 
     try:
         cfg = load_config(config_dir)
@@ -400,9 +553,9 @@ def _doctor(config_dir: str) -> None:
             print(f"waveshare_epd {ver}: NOT INSTALLED")
 
     try:
-        import subprocess
+        import subprocess as _sp
 
-        result = subprocess.run(
+        result = _sp.run(
             ["pgrep", "-x", "pisugar-server"], capture_output=True, text=True
         )
         if result.returncode == 0:
@@ -436,13 +589,16 @@ def _ui_preview(args) -> None:
     from ui.preview.contact_sheet import render_contact_sheet
 
     os.makedirs(args.output_dir, exist_ok=True)
+    output_paths: List[str] = []
     if args.template:
         print(f"Rendering template: {args.template}")
         path = render_template(args.template, output_dir=args.output_dir)
+        output_paths.append(path)
         print(f"  -> {path}")
     else:
         print(f"Rendering all templates to {args.output_dir}/")
         paths = render_all(output_dir=args.output_dir)
+        output_paths.extend(paths)
         for p in paths:
             print(f"  {os.path.basename(p)}")
         print(f"\n{len(paths)} template(s) rendered.")
@@ -450,7 +606,11 @@ def _ui_preview(args) -> None:
     if args.contact_sheet:
         cs_path = os.path.join(args.output_dir, "contact_sheet.png")
         render_contact_sheet(output_path=cs_path)
+        output_paths.append(cs_path)
         print(f"Contact sheet -> {cs_path}")
+
+    if getattr(args, "show", False):
+        _show_images(output_paths)
 
 
 if __name__ == "__main__":
