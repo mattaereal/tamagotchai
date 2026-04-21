@@ -114,55 +114,48 @@ def _inject_mock_agent_feed(screen: AgentFeedScreen, scenario: str = "mixed") ->
             {
                 "name": "OpenCode",
                 "status": "working",
-                "message": "Refactoring auth module",
+                "message": "cmd: git commit",
                 "last_heartbeat": datetime.now(timezone.utc).isoformat(),
-            },
-            {
-                "name": "Cursor",
-                "status": "idle",
-                "last_heartbeat": datetime.now(timezone.utc).isoformat(),
-            },
-            {
-                "name": "Lotus",
-                "status": "success",
-                "message": "PR merged",
-                "last_heartbeat": datetime.now(timezone.utc).isoformat(),
+                "metadata": {
+                    "model": "anthropic/claude-3.7-sonnet",
+                    "tokens_input": 1240,
+                    "tokens_output": 340,
+                    "cost_usd": 0.0042,
+                    "project": "tamagotchai",
+                    "message_count": 5,
+                    "files_modified": 3,
+                },
             },
         ],
-        "all_ok": [
+        "idle": [
             {
                 "name": "OpenCode",
                 "status": "idle",
+                "message": "",
                 "last_heartbeat": datetime.now(timezone.utc).isoformat(),
-            },
-            {
-                "name": "Cursor",
-                "status": "idle",
-                "last_heartbeat": datetime.now(timezone.utc).isoformat(),
-            },
-            {
-                "name": "Lotus",
-                "status": "idle",
-                "last_heartbeat": datetime.now(timezone.utc).isoformat(),
+                "metadata": {
+                    "project": "tamagotchai",
+                    "message_count": 12,
+                },
             },
         ],
-        "errors": [
+        "waiting": [
+            {
+                "name": "OpenCode",
+                "status": "waiting_input",
+                "message": "needs permission: bash",
+                "last_heartbeat": datetime.now(timezone.utc).isoformat(),
+                "metadata": {
+                    "project": "tamagotchai",
+                    "tool_name": "bash",
+                },
+            },
+        ],
+        "hint": [
             {
                 "name": "OpenCode",
                 "status": "error",
-                "message": "Out of memory",
-                "last_heartbeat": datetime.now(timezone.utc).isoformat(),
-            },
-            {
-                "name": "Cursor",
-                "status": "stuck",
-                "message": "Waiting for input",
-                "last_heartbeat": datetime.now(timezone.utc).isoformat(),
-            },
-            {
-                "name": "Lotus",
-                "status": "offline",
-                "last_heartbeat": "2020-01-01T00:00:00Z",
+                "__fetch_error": True,
             },
         ],
     }
@@ -427,9 +420,10 @@ def _run_demo(
         elif isinstance(screen, AgentFeedScreen):
             has_agent_feed = True
             print("\n  === Agent Feed ===")
-            seq.agent_feed(screen, "all_ok", "All OK")
-            seq.agent_feed(screen, "mixed", "Mixed")
-            seq.agent_feed(screen, "errors", "Errors")
+            seq.agent_feed(screen, "hint", "Setup Hint")
+            seq.agent_feed(screen, "idle", "Idle")
+            seq.agent_feed(screen, "waiting", "Waiting")
+            seq.agent_feed(screen, "mixed", "Working")
 
         elif isinstance(screen, DeviceStatusScreen):
             has_device_status = True

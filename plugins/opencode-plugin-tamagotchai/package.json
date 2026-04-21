@@ -1,0 +1,24 @@
+{
+  "name": "opencode-plugin-tamagotchai",
+  "version": "1.0.0",
+  "description": "OpenCode plugin that exposes live agent status via HTTP for Tamagotchai e-paper displays",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/index.ts",
+  "module": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opencode-ai/plugin": "^1.2.23",
+    "@opencode-ai/sdk": "^1.2.23",
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0"
+  },
+  "oc-plugin": ["server"]
+}

@@ -1,7 +1,26 @@
 # Screen definitions for the e-paper display.
-# Each screen uses a template and cycles in the scheduler.
+# The scheduler cycles through each screen in order.
+#
+# Default shipped screen: OpenCode agent feed.
+# If the plugin is not running, the screen shows setup instructions
+# instead of a cryptic offline error.
+#
+# To change the agent URL, replace 127.0.0.1 with your agent machine's IP:
+#   ip addr show            # (on the agent machine)
+#   hostname -I             # (on the agent machine)
 
 screens:
+  - name: OpenCode
+    template: agent_feed
+    poll_interval: 5
+    display_duration: 15
+    stale_threshold: 120
+    agents:
+      - name: OpenCode
+        url: http://127.0.0.1:7788/status
+
+  # --- Optional: add more screens below ---
+  #
   # --- status_board: category/bullet status display ---
   # Category types:
   #   statuspage - Atlassian Statuspage adapter
@@ -12,115 +31,48 @@ screens:
   #
   # Built-in icons: anthropic, openai, lotus, generic
   # Custom icons: path to a 12x12 PNG file
-  - name: AI Health
-    template: status_board
-    poll_interval: 30
-    display_duration: 30
-    categories:
-      - name: Claude
-        url: https://status.claude.com/api/v2/summary.json
-        type: statuspage
-        icon: anthropic
-        items:
-          - key: claude.ai
-            label: AI
-          - key: Claude Code
-            label: Code
-          - key: Claude API (api.anthropic.com)
-            label: API
-
-      - name: OpenAI
-        url: https://status.openai.com/api/v2/summary.json
-        type: statuspage
-        icon: openai
-        items:
-          - key: App
-            label: App
-          - key: Conversations
-            label: Chat
-          - key: Codex Web
-            label: Web
-          - key: Codex API
-            label: API
-
-      - name: Lotus
-        url: https://lotus.therektgames.com/health
-        type: json
-        icon: lotus
-        items:
-          - key: status
-            label: Live
-          - key: pending
-            label: Queue
-
+  # - name: AI Health
+  #   template: status_board
+  #   poll_interval: 30
+  #   display_duration: 30
+  #   categories:
+  #     - name: Claude
+  #       url: https://status.claude.com/api/v2/summary.json
+  #       type: statuspage
+  #       icon: anthropic
+  #       items:
+  #         - key: claude.ai
+  #           label: AI
+  #         - key: Claude Code
+  #           label: Code
+  #         - key: Claude API (api.anthropic.com)
+  #           label: API
+  #
+  #     - name: OpenAI
+  #       url: https://status.openai.com/api/v2/summary.json
+  #       type: statuspage
+  #       icon: openai
+  #       items:
+  #         - key: App
+  #           label: App
+  #         - key: Conversations
+  #           label: Chat
+  #         - key: Codex Web
+  #           label: Web
+  #         - key: Codex API
+  #           label: API
+  #
   # --- tamagotchi: character-based agent monitor ---
   # Single url returns JSON. All key access uses dot-notation.
   # mood_map.key: which JSON field drives sprite selection
   # info_lines: each line extracts from JSON via key or template+keys
   #   - key: single field, dot-notation (e.g. "status" or "data.health")
-  #   - template + keys: positional format (e.g. "+{0} M{1}" with keys: [prs_created, prs_merged])
-  - name: Lotus
-    template: tamagotchi
-    poll_interval: 5
-    display_duration: 15
-    url: https://lotus.therektgames.com/health
-    sprites:
-      idle: img/irk_1.png
-      working: img/irk_2.png
-      error: img/irk_3.png
-      success: img/irk_4.png
-    mood_map:
-      key: status
-      ok: idle
-      ok_busy: working
-      error: error
-    info_lines:
-      - label: status
-        key: status
-      - label: pending
-        key: pending
-      - label: PRs
-        template: "+{0} M{1}"
-        keys: [prs_created, prs_merged]
-      - label: Issues
-        key: issues_created
-      - label: Resolved
-        key: comments_resolved
-      - label: Commits
-        key: commits_today
-      - label: Last
-        key: last_action
-        max_length: 18
-
-  # --- agent_feed: multi-agent status overview ---
-  # Shows multiple agents on one screen in compact rows.
-  # Each agent should serve the standard Agent Status JSON schema:
-  #   status (required): idle|working|waiting_input|stuck|error|success
-  #   last_heartbeat (required): ISO 8601 timestamp
-  #   message (optional): current activity description
-  #   pending (optional): number of pending tasks
-  #   metadata (optional): freeform dict, accessible via dot-notation
-  # - name: All Agents
-  #   template: agent_feed
-  #   poll_interval: 5
-  #   display_duration: 30
-  #   stale_threshold: 120
-  #   agents:
-  #     - name: OpenCode
-  #       url: http://192.168.1.50:7788/status
-  #     - name: Cursor
-  #       url: http://192.168.1.51:7788/status
-
-  # --- Per-agent tamagotchi with explicit mood map ---
-  # The `map` field maps JSON status values to sprite moods.
-  # If `map` is absent, the legacy ok/ok_busy/error logic is used.
-  # `fallback` is the mood used for unmapped status values.
-  # - name: OpenCode
+  #   - template + keys: positional format (e.g. "+{0} M{1}")
+  # - name: Lotus
   #   template: tamagotchi
   #   poll_interval: 5
   #   display_duration: 15
-  #   url: http://192.168.1.50:7788/status
-  #   stale_threshold: 120
+  #   url: https://lotus.therektgames.com/health
   #   sprites:
   #     idle: img/irk_1.png
   #     working: img/irk_2.png
@@ -128,24 +80,18 @@ screens:
   #     success: img/irk_4.png
   #   mood_map:
   #     key: status
-  #     map:
-  #       idle: idle
-  #       working: working
-  #       waiting_input: working
-  #       stuck: error
-  #       error: error
-  #       success: success
-  #       offline: error
-  #     fallback: idle
+  #     ok: idle
+  #     ok_busy: working
+  #     error: error
   #   info_lines:
   #     - label: status
   #       key: status
-  #     - label: task
-  #       key: message
+  #     - label: pending
+  #       key: pending
+  #     - label: Last
+  #       key: last_action
   #       max_length: 18
-  #     - label: files
-  #       key: metadata.files_modified
-
+  #
   # --- device_status: local device vitals ---
   # Shows hostname, IP, WiFi, CPU temp, memory, disk, uptime, battery, PID.
   # No url needed -- gathers data from local system calls.

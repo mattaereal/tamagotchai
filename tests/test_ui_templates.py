@@ -327,6 +327,11 @@ def test_render_agent_feed_with_data():
                     "status": "working",
                     "message": "Coding",
                     "fetch_error": False,
+                    "metadata": {
+                        "model": "claude-3.7-sonnet",
+                        "tokens_total": 1580,
+                        "cost_usd": 0.0042,
+                    },
                 },
                 {
                     "name": "Cursor",
@@ -342,6 +347,117 @@ def test_render_agent_feed_with_data():
                 },
             ],
             "num_agents": 3,
+        },
+    )
+    assert img.size == (122, 250)
+
+
+def test_render_agent_feed_metadata_only():
+    from ui.templates import render
+
+    img = render(
+        "agent_feed",
+        {
+            "name": "Agents",
+            "agents": [
+                {
+                    "name": "OpenCode",
+                    "status": "working",
+                    "message": "",
+                    "fetch_error": False,
+                    "metadata": {
+                        "model": "anthropic/claude-3.7-sonnet",
+                        "tokens_input": 1240,
+                        "tokens_output": 340,
+                        "cost_usd": 0.0042,
+                        "project": "tamagotchai",
+                        "message_count": 3,
+                        "files_modified": 2,
+                    },
+                },
+            ],
+            "num_agents": 1,
+        },
+    )
+    assert img.size == (122, 250)
+
+
+def test_render_agent_feed_fallback_metadata():
+    from ui.templates import render
+
+    img = render(
+        "agent_feed",
+        {
+            "name": "Agents",
+            "agents": [
+                {
+                    "name": "Hermes",
+                    "status": "working",
+                    "message": "",
+                    "fetch_error": False,
+                    "metadata": {
+                        "project": "myproject",
+                        "files_modified": 5,
+                        "message_count": 12,
+                    },
+                },
+            ],
+            "num_agents": 1,
+        },
+    )
+    assert img.size == (122, 250)
+
+
+def test_render_agent_feed_show_hint():
+    from ui.templates import render
+
+    # When all agents failed, show_hint triggers setup instructions
+    img = render(
+        "agent_feed",
+        {
+            "name": "OpenCode",
+            "agents": [
+                {
+                    "name": "OpenCode",
+                    "status": "",
+                    "message": "",
+                    "fetch_error": True,
+                    "metadata": {},
+                },
+            ],
+            "num_agents": 1,
+            "show_hint": True,
+        },
+    )
+    assert img.size == (122, 250)
+
+
+def test_render_agent_feed_mixed_and_hint():
+    from ui.templates import render
+
+    # show_hint=False because not all agents failed
+    img = render(
+        "agent_feed",
+        {
+            "name": "Agents",
+            "agents": [
+                {
+                    "name": "OpenCode",
+                    "status": "working",
+                    "message": "coding",
+                    "fetch_error": False,
+                    "metadata": {},
+                },
+                {
+                    "name": "Cursor",
+                    "status": "",
+                    "message": "",
+                    "fetch_error": True,
+                    "metadata": {},
+                },
+            ],
+            "num_agents": 2,
+            "show_hint": False,
         },
     )
     assert img.size == (122, 250)

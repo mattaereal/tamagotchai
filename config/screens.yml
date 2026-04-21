@@ -1,74 +1,23 @@
+# Tamagotchai screen definitions.
+# The scheduler cycles through each screen in order.
+#
+# Default: OpenCode agent feed.
+# To add more screens, duplicate the block and change the parameters,
+# or run: python app.py init
+#
+# The OpenCode agent feed polls your agent machine for live status.
+# If the agent is offline, the screen shows setup instructions.
+#
+# To configure the URL, replace 127.0.0.1 with your agent machine's IP:
+#   ip addr show            # (on the agent machine)
+#   hostname -I             # (on the agent machine)
+
 screens:
-  - name: AI Health
-    template: status_board
-    poll_interval: 30
-    display_duration: 30
-    categories:
-      - name: Claude
-        url: https://status.claude.com/api/v2/summary.json
-        type: statuspage
-        icon: anthropic
-        items:
-          - key: claude.ai
-            label: AI
-          - key: Claude Code
-            label: Code
-          - key: Claude API (api.anthropic.com)
-            label: API
-
-      - name: OpenAI
-        url: https://status.openai.com/api/v2/summary.json
-        type: statuspage
-        icon: openai
-        items:
-          - key: App
-            label: App
-          - key: Conversations
-            label: Chat
-          - key: Codex Web
-            label: Web
-          - key: Codex API
-            label: API
-
-      - name: Lotus
-        url: https://lotus.therektgames.com/health
-        type: json
-        icon: lotus
-        items:
-          - key: status
-            label: Live
-          - key: pending
-            label: Queue
-
-  - name: Lotus
-    template: tamagotchi
+  - name: OpenCode
+    template: agent_feed
     poll_interval: 5
     display_duration: 15
-    url: https://lotus.therektgames.com/health
-    sprites:
-      idle: img/irk_1.png
-      working: img/irk_2.png
-      error: img/irk_3.png
-      success: img/irk_4.png
-    mood_map:
-      key: status
-      ok: idle
-      ok_busy: working
-      error: error
-    info_lines:
-      - label: status
-        key: status
-      - label: pending
-        key: pending
-      - label: PRs
-        template: "+{0} M{1}"
-        keys: [prs_created, prs_merged]
-      - label: Issues
-        key: issues_created
-      - label: Resolved
-        key: comments_resolved
-      - label: Commits
-        key: commits_today
-      - label: Last
-        key: last_action
-        max_length: 18
+    stale_threshold: 120
+    agents:
+      - name: OpenCode
+        url: http://127.0.0.1:7788/status

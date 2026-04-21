@@ -89,13 +89,18 @@ class AgentFeedScreen(Screen):
         from ui.canvas import Canvas
 
         agents = []
+        all_failed = True
         for a in self._agents_data:
+            failed = bool(a.get("__fetch_error"))
+            if not failed:
+                all_failed = False
             agents.append(
                 {
                     "name": a.get("name", "?"),
                     "status": a.get("status", ""),
                     "message": a.get("message", ""),
-                    "fetch_error": bool(a.get("__fetch_error")),
+                    "fetch_error": failed,
+                    "metadata": a.get("metadata") if isinstance(a.get("metadata"), dict) else {},
                 }
             )
 
@@ -103,6 +108,7 @@ class AgentFeedScreen(Screen):
             "name": self._config.name,
             "agents": agents,
             "num_agents": len(self._agents_data),
+            "show_hint": all_failed and len(self._agents_data) > 0,
         }
 
         self._last_hash = self._data_hash()
@@ -115,6 +121,13 @@ class AgentFeedScreen(Screen):
 
     def _data_hash(self) -> str:
         raw = str(
-            sorted((a.get("name", ""), a.get("status", "")) for a in self._agents_data)
+            sorted(
+                (
+                    a.get("name", ""),
+                    a.get("status", ""),
+                    str(a.get("metadata")),
+                )
+                for a in self._agents_data
+            )
         )
         return hashlib.md5(raw.encode()).hexdigest()

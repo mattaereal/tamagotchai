@@ -106,6 +106,7 @@ Screens are defined in YAML config using templates:
    - Reads multiple agent URLs in parallel (`agents` list in config)
    - Each agent serves the Standard Agent Status JSON (see below)
    - Renders a compact row per agent: icon + name + status + message
+   - When `metadata` includes `model`, `tokens_total`/`tokens_input`/`tokens_output`, or `cost_usd`, renders a compact metadata line (e.g. `claude-3.7  $0.004`)
    - Applies stale detection per-agent using `stale_threshold`
    - Status icons: `[+]` idle/ok, `[!]` working/waiting_input, `[-]` error/stuck/offline, `[*]` success
 
@@ -288,26 +289,53 @@ Any AI agent can feed its live status into the display by serving this JSON at a
 ```json
 {
   "status": "working",
-  "message": "Refactoring auth module",
-  "pending": 0,
-  "started_at": "2026-04-19T10:30:00Z",
+  "message": "cmd: git commit",
+  "pending": 1,
   "last_heartbeat": "2026-04-19T10:35:22Z",
   "metadata": {
+    "project": "tamagotchai",
+    "model": "anthropic/claude-3.7-sonnet",
+    "tokens_input": 1240,
+    "tokens_output": 340,
+    "tokens_total": 1580,
+    "cost_usd": 0.0042,
+    "tool_name": "bash",
+    "message_count": 5,
     "files_modified": 3,
-    "commands_run": 7,
-    "task": "implement-auth"
+    "session_duration_ms": 245000
   }
 }
 ```
+
+**For OpenCode users:** Instead of building a custom endpoint, install `plugins/opencode-plugin-tamagotchai/` as an OpenCode plugin. It starts an HTTP server inside the OpenCode process and serves this exact JSON schema automatically, tracking sessions, tools, tokens, model, cost, files modified, and more from internal events. See the plugin README for setup.
+
+### Default shipped screen
+
+Tamagotchai ships with `agent_feed` as its default screen, polling `http://127.0.0.1:7788/status` for an OpenCode agent. If the agent is offline, the display shows setup instructions instead of a cryptic error -- telling the user exactly how to install the plugin and start the agent.
+
+### Agent Status JSON fields
 
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `status` | string | Yes | One of: `idle`, `working`, `waiting_input`, `stuck`, `error`, `success` |
 | `last_heartbeat` | ISO 8601 | Yes | Timestamp of last update; used for stale/offline detection |
 | `message` | string | No | Current activity description (shown in agent_feed and info_lines) |
-| `pending` | int | No | Number of pending tasks (used by legacy mood_map ok_busy logic) |
-| `started_at` | ISO 8601 | No | When the current task started |
-| `metadata` | object | No | Freeform dict; accessible via dot-notation in info_lines (e.g. `metadata.files_modified`) |
+| `pending` | int | No | Number of pending tasks |
+| `metadata` | object | No | Freeform dict; accessible via dot-notation in info_lines |
+
+**Common metadata keys** (populated by `opencode-plugin-tamagotchai`):
+
+| Key | Description | Displayed by `agent_feed`? |
+|---|---|---|
+| `model` | Active LLM model | Yes (truncated) |
+| `tokens_input` / `tokens_output` / `tokens_total` | Token usage counters | Yes (compact format) |
+| `cost_usd` | Cumulative cost in USD | Yes |
+| `tool_name` | Last tool/command used | Yes (in `message`) |
+| `project` | Project name | Yes (fallback) |
+| `message_count` | Messages this session | Yes (fallback) |
+| `files_modified` | Unique files touched | Yes (fallback) |
+| `session_duration_ms` | Session elapsed time | No (available in JSON) |
+| `commits` / `lines_added` / `lines_removed` | Git diff stats | No (available in JSON) |
 
 ## Testing
 

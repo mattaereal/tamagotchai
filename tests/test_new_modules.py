@@ -816,7 +816,12 @@ def test_agent_feed_screen_render():
     )
     screen = AgentFeedScreen(sc)
     screen._agents_data = [
-        {"name": "OpenCode", "status": "working", "message": "Refactoring auth"},
+        {
+            "name": "OpenCode",
+            "status": "working",
+            "message": "Refactoring auth",
+            "metadata": {"model": "claude-3.7-sonnet", "cost_usd": 0.004},
+        },
         {"name": "Cursor", "status": "idle"},
     ]
     img = screen.render(122, 250)
@@ -837,6 +842,11 @@ def test_agent_feed_screen_has_changed():
     screen.render(122, 250)
     assert screen.has_changed() is False
     screen._agents_data = [{"name": "Test", "status": "working"}]
+    assert screen.has_changed() is True
+    screen.render(122, 250)
+    screen._agents_data = [
+        {"name": "Test", "status": "working", "metadata": {"cost_usd": 0.01}}
+    ]
     assert screen.has_changed() is True
 
 

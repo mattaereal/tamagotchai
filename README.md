@@ -321,26 +321,84 @@ One agent per screen, with sprites and a mood map:
         key: metadata.files_modified
 ```
 
-### Multi-agent feed screen
+### Multi-agent feed screen (default)
 
-All agents on one screen as compact rows:
+Tamagotchai ships with `agent_feed` as its default screen. All agents on one screen as compact rows:
 
 ```yaml
-  - name: All Agents
+  - name: OpenCode
     template: agent_feed
     poll_interval: 5
-    display_duration: 30
+    display_duration: 15
     stale_threshold: 120
     agents:
       - name: OpenCode
-        url: http://192.168.1.50:7788/status
-      - name: Cursor
-        url: http://192.168.1.51:7788/status
-      - name: Lotus
-        url: https://lotus.therektgames.com/health
+        url: http://127.0.0.1:7788/status
 ```
 
-Rendered as compact rows: `[icon] AgentName  working  "Refactoring auth..."`
+Rendered as compact rows: `[icon] AgentName  working  "cmd: bash"`
+
+When `metadata` is present, the `agent_feed` template also displays model name, token counts, and cost inline (e.g. `claude-3.7  $0.004` or `1.2k tok  $0.004`).
+
+**When no agent is reachable**, the screen shows setup instructions instead of a cryptic offline error -- telling the user how to install the plugin and start the agent.
+
+## OpenCode Native Integration
+
+For **OpenCode** agents, you don't need to build a custom HTTP endpoint. Install the included plugin and it will start a status server automatically inside the OpenCode process.
+
+### 1. Install the plugin
+
+Copy the plugin file into OpenCode's auto-discovery directory:
+
+```bash
+mkdir -p ~/.config/opencode/plugins
+cp /path/to/tamagotchai/plugins/opencode-plugin-tamagotchai/src/index.ts ~/.config/opencode/plugins/tamagotchai.ts
+```
+
+OpenCode automatically loads all `.ts` and `.js` files from `~/.config/opencode/plugins/` at startup.
+
+### 2. Run OpenCode
+
+The plugin auto-starts an HTTP server on port `7788` (configurable via `TAMAGOTCHAI_PORT`). No extra services. No OTEL collectors. No bridges.
+
+```bash
+export TAMAGOTCHAI_PORT=7788
+opencode
+```
+
+Verify it's working:
+```bash
+curl http://localhost:7788/status
+```
+
+### 4. Point Tamagotchai at it
+
+```yaml
+screens:
+  - name: OpenCode
+    template: agent_feed
+    poll_interval: 5
+    display_duration: 15
+    stale_threshold: 120
+    agents:
+      - name: OpenCode
+        url: http://YOUR_AGENT_IP:7788/status
+```
+
+That's it. The plugin tracks sessions, tool usage, token counts, model names, and cost automatically from OpenCode's internal events.
+
+### Plugin metadata fields
+
+When using the OpenCode plugin, the `agent_feed` template can display these fields automatically:
+
+| Metadata key | Example | Display |
+|---|---|---|
+| `model` | `anthropic/claude-3.7-sonnet` | `claude-3.7-sonnet` (truncated to fit) |
+| `tokens_input` / `tokens_output` | `1240` / `340` | `1.6k tok` |
+| `tokens_total` | `1580` | `1.6k tok` |
+| `cost_usd` | `0.0042` | `$0.004` |
+| `tool_name` | `bash` | (used in `message`) |
+| `session_duration_ms` | `245000` | (available in JSON) |
 
 ### Mood map modes
 
