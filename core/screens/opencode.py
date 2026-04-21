@@ -1,21 +1,21 @@
 """OpenCode detail screen (template: opencode).
 
-Dedicated single-agent screen that shows ALL metadata from
-opencode-plugin-tamagotchai in a dense vertical layout.
+Dedicated single-agent screen. Users configure info_lines in
+screens.yml to choose which fields appear. All dot-notation keys
+are supported (e.g. metadata.model, metadata.cost_usd).
 
-Fetches from /status (latest active session).
-If fetch fails, the template renders a compact hint instead.
+If fetch fails, the template renders a setup hint instead.
 """
 
 import hashlib
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from PIL import Image
 
 from .base import Screen
-from ..config import ScreenConfig
+from ..config import ScreenConfig, resolve_key
 
 logger = logging.getLogger(__name__)
 
@@ -55,18 +55,38 @@ class OpenCodeScreen(Screen):
         from ui.templates import render as tpl_render
         from ui.canvas import Canvas
 
+        info_lines = []
+        if not self._data.get("__fetch_error"):
+            for il in self._config.info_lines:
+                value = self._format_info_line(il)
+                if il.max_length and len(value) > il.max_length:
+                    value = value[: il.max_length - 3] + "..."
+                info_lines.append({"label": il.label, "value": value})
+
         data = {
             "name": self._config.name,
             "status": self._data.get("status", ""),
             "message": self._data.get("message", ""),
             "last_heartbeat": self._data.get("last_heartbeat", ""),
             "pending": self._data.get("pending", 0),
-            "metadata": self._data.get("metadata") if isinstance(self._data.get("metadata"), dict) else {},
             "fetch_error": bool(self._data.get("__fetch_error")),
+            "info_lines": info_lines,
         }
 
         self._last_hash = self._data_hash()
         return tpl_render("opencode", data, canvas=Canvas(width, height))
+
+    def _format_info_line(self, il) -> str:
+        if il.template and il.keys:
+            try:
+                vals = [str(resolve_key(self._data, k, "?")) for k in il.keys]
+                return il.template.format(*vals)
+            except (KeyError, IndexError):
+                return "?"
+        if il.key:
+            val = resolve_key(self._data, il.key, "")
+            return str(val)
+        return ""
 
     def has_changed(self) -> bool:
         if self._last_hash is None:

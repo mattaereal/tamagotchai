@@ -2,9 +2,8 @@
 # The scheduler cycles through each screen in order.
 #
 # Default: OpenCode dedicated detail screen.
-# Shows full metadata from opencode-plugin-tamagotchai.
-# To add more screens, duplicate the block and change the parameters,
-# or run: python app.py init
+# Users can comment/uncomment info_lines below to show/hide fields.
+# All keys use dot-notation (e.g. metadata.model, metadata.cost_usd).
 #
 # If the agent is offline, the screen shows setup instructions.
 #
@@ -19,3 +18,48 @@ screens:
     display_duration: 15
     stale_threshold: 120
     url: http://127.0.0.1:7788/status
+    info_lines:
+      # --- Core fields ---
+      - label: model
+        key: metadata.model
+        max_length: 18
+      - label: tok
+        template: "{0} in / {1} out"
+        keys: [metadata.tokens_input, metadata.tokens_output]
+        max_length: 20
+      - label: cost
+        template: "${0}"
+        keys: [metadata.cost_usd]
+        max_length: 12
+      - label: tool
+        key: metadata.tool_name
+        max_length: 16
+      - label: files
+        key: metadata.files_modified
+        max_length: 12
+      - label: msgs
+        key: metadata.message_count
+        max_length: 12
+      - label: duration
+        key: metadata.session_duration_ms
+        max_length: 14
+      - label: diff
+        template: "+{0} / -{1}"
+        keys: [metadata.lines_added, metadata.lines_removed]
+        max_length: 16
+      - label: commits
+        key: metadata.commits
+        max_length: 10
+      - label: project
+        key: metadata.project
+        max_length: 14
+      # Uncomment below to add more fields:
+      # - label: tokens_total
+      #   key: metadata.tokens_total
+      #   max_length: 14
+      # - label: pending
+      #   key: pending
+      #   max_length: 10
+      # - label: session
+      #   key: session_id
+      #   max_length: 16

@@ -1,36 +1,55 @@
 # Screen definitions for the e-paper display.
 # The scheduler cycles through each screen in order.
 #
-# Default shipped screen: OpenCode agent feed.
-# If the plugin is not running, the screen shows setup instructions
-# instead of a cryptic offline error.
-#
-# To change the agent URL, replace 127.0.0.1 with your agent machine's IP:
-#   ip addr show            # (on the agent machine)
-#   hostname -I             # (on the agent machine)
+# Default: OpenCode dedicated detail screen.
+# Users can comment/uncomment info_lines to show/hide fields.
+# All keys use dot-notation (e.g. metadata.model).
 
 screens:
   - name: OpenCode
-    template: agent_feed
+    template: opencode
     poll_interval: 5
     display_duration: 15
     stale_threshold: 120
-    agents:
-      - name: OpenCode
-        url: http://127.0.0.1:7788/status
+    url: http://127.0.0.1:7788/status
+    info_lines:
+      # Core fields -- comment/uncomment to customize
+      - label: model
+        key: metadata.model
+        max_length: 18
+      - label: tok
+        template: "{0} in / {1} out"
+        keys: [metadata.tokens_input, metadata.tokens_output]
+        max_length: 20
+      - label: cost
+        template: "${0}"
+        keys: [metadata.cost_usd]
+        max_length: 12
+      - label: tool
+        key: metadata.tool_name
+        max_length: 16
+      - label: files
+        key: metadata.files_modified
+        max_length: 12
+      - label: msgs
+        key: metadata.message_count
+        max_length: 12
+      - label: duration
+        key: metadata.session_duration_ms
+        max_length: 14
+      - label: diff
+        template: "+{0} / -{1}"
+        keys: [metadata.lines_added, metadata.lines_removed]
+        max_length: 16
+      - label: commits
+        key: metadata.commits
+        max_length: 10
+      - label: project
+        key: metadata.project
+        max_length: 14
 
-  # --- Optional: add more screens below ---
+  # --- Optional: legacy templates below ---
   #
-  # --- status_board: category/bullet status display ---
-  # Category types:
-  #   statuspage - Atlassian Statuspage adapter
-  #   json - Fetch raw JSON, map item keys to statuses by convention
-  #          (ok/up/true/0=OK, degraded/warning/non-zero=DEGRADED,
-  #           down/error/false=DOWN, else UNKNOWN)
-  # Item keys use dot-notation for nested access (e.g. "status.health")
-  #
-  # Built-in icons: anthropic, openai, lotus, generic
-  # Custom icons: path to a 12x12 PNG file
   # - name: AI Health
   #   template: status_board
   #   poll_interval: 30
@@ -43,59 +62,7 @@ screens:
   #       items:
   #         - key: claude.ai
   #           label: AI
-  #         - key: Claude Code
-  #           label: Code
-  #         - key: Claude API (api.anthropic.com)
-  #           label: API
   #
-  #     - name: OpenAI
-  #       url: https://status.openai.com/api/v2/summary.json
-  #       type: statuspage
-  #       icon: openai
-  #       items:
-  #         - key: App
-  #           label: App
-  #         - key: Conversations
-  #           label: Chat
-  #         - key: Codex Web
-  #           label: Web
-  #         - key: Codex API
-  #           label: API
-  #
-  # --- tamagotchi: character-based agent monitor ---
-  # Single url returns JSON. All key access uses dot-notation.
-  # mood_map.key: which JSON field drives sprite selection
-  # info_lines: each line extracts from JSON via key or template+keys
-  #   - key: single field, dot-notation (e.g. "status" or "data.health")
-  #   - template + keys: positional format (e.g. "+{0} M{1}")
-  # - name: Lotus
-  #   template: tamagotchi
-  #   poll_interval: 5
-  #   display_duration: 15
-  #   url: https://lotus.therektgames.com/health
-  #   sprites:
-  #     idle: img/irk_1.png
-  #     working: img/irk_2.png
-  #     error: img/irk_3.png
-  #     success: img/irk_4.png
-  #   mood_map:
-  #     key: status
-  #     ok: idle
-  #     ok_busy: working
-  #     error: error
-  #   info_lines:
-  #     - label: status
-  #       key: status
-  #     - label: pending
-  #       key: pending
-  #     - label: Last
-  #       key: last_action
-  #       max_length: 18
-  #
-  # --- device_status: local device vitals ---
-  # Shows hostname, IP, WiFi, CPU temp, memory, disk, uptime, battery, PID.
-  # No url needed -- gathers data from local system calls.
-  # Battery reads from PiSugar (requires pisugar pip package on Pi).
   # - name: Device
   #   template: device_status
   #   poll_interval: 30
