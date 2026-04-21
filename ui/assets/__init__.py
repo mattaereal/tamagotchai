@@ -237,6 +237,27 @@ def load_sprite(path: str, size: int = SPRITE_SIZE) -> Optional[Image.Image]:
         return None
 
 
+def load_opencode_logo(size: int = 48) -> Optional[Image.Image]:
+    """Load the OpenCode logo, converting to 1-bit e-paper format.
+
+    The source logo is a 28x28 pixel-art PNG. We scale it with
+    NEAREST to preserve crisp edges on the low-res e-paper panel.
+    """
+    path = os.path.join(os.path.dirname(__file__), "opencode_logo.png")
+    if not os.path.exists(path):
+        logger.warning(f"OpenCode logo not found: {path}")
+        return None
+    try:
+        img = Image.open(path)
+        # Convert palette/RGBA to grayscale, then 1-bit
+        gray = img.convert("L")
+        resized = gray.resize((size, size), Image.NEAREST)
+        return resized.convert("1", dither=Image.NONE)
+    except Exception as e:
+        logger.warning(f"Failed to load OpenCode logo: {e}")
+        return None
+
+
 def builtin_icon_names() -> list[str]:
     _ensure_icons()
     return list(_BUILTIN_ICONS.keys())

@@ -204,6 +204,7 @@ class ScreenConfig:
     agents: List[AgentFeedEntry] = dataclass_field(default_factory=list)
     layout: Optional[str] = None
     template: Optional[str] = None
+    model_format: str = "%provider - %model"
 
 
 @dataclass
@@ -330,6 +331,7 @@ class AppConfig:
                     agents=agents,
                     layout=s_raw.get("layout"),
                     template=s_raw.get("template"),
+                    model_format=s_raw.get("model_format", "%provider - %model"),
                 )
             )
 

@@ -1,8 +1,9 @@
 """OpenCode detail layout -- landscape single-agent screen.
 
 Split-panel design:
-  - Left: framed status icon box + name
+  - Left: framed OpenCode logo (48x48)
   - Right: info lines (large fields alone, small fields paired)
+  - Footer: heartbeat time left, provider-model right
 
 If fetch fails, shows a bordered setup hint.
 """
@@ -15,6 +16,7 @@ from PIL import Image
 
 from ..canvas import Canvas
 from .. import layout, MARGIN
+from ..assets import load_opencode_logo
 from . import register
 
 _STATUS_ICONS = {
@@ -34,10 +36,10 @@ _LARGE_LABELS = {"model", "message", "msg", "tool", "status", "project", "name"}
 # Labels that can be paired on the same line (compact metrics)
 _SMALL_LABELS = {"cost", "files", "msgs", "tok", "tokens", "duration", "commits", "diff", "pending"}
 
-_LEFT_COL_W = 70
 _RIGHT_COL_X = 78
 _LINE_H = 11
 _BOX_SIZE = 60
+_LOGO_SIZE = 48
 
 
 def _is_large(label: str) -> bool:
@@ -56,6 +58,7 @@ def render(c: Canvas, data: dict) -> Image.Image:
     heartbeat = data.get("last_heartbeat", "")
     status = str(data.get("status", "")).lower()
     message = data.get("message", "")
+    model_footer = data.get("model_footer", "")
 
     # Title bar
     c.text((MARGIN, 3), name, fill=0)
@@ -73,24 +76,26 @@ def render(c: Canvas, data: dict) -> Image.Image:
     c.text((MARGIN, 18), status_text, fill=0)
     c.hline(30, fill=0)
 
-    # Left column: framed status box + name
-    box_x = MARGIN + 5  # centered in 70px column
+    # Left column: framed logo box
+    box_x = MARGIN + 5
     box_y = 34
     c.rect((box_x, box_y, box_x + _BOX_SIZE, box_y + _BOX_SIZE), outline=0)
     c.rect((box_x + 2, box_y + 2, box_x + _BOX_SIZE - 2, box_y + _BOX_SIZE - 2), outline=0)
 
-    # Large status icon centered in box
-    icon_text = _STATUS_ICONS.get(status, "[?]")
-    # Estimate icon width (~24px for 3 chars)
-    icon_x = box_x + (_BOX_SIZE - 24) // 2
-    icon_y = box_y + (_BOX_SIZE - 12) // 2
-    c.text((icon_x, icon_y), icon_text, fill=0)
-
-    # Name below box
-    c.centered_text(box_y + _BOX_SIZE + 4, name[:10], fill=0)
+    # OpenCode logo centered in box
+    logo = load_opencode_logo(size=_LOGO_SIZE)
+    if logo:
+        logo_x = box_x + (_BOX_SIZE - _LOGO_SIZE) // 2
+        logo_y = box_y + (_BOX_SIZE - _LOGO_SIZE) // 2
+        c.paste(logo, (logo_x, logo_y))
+    else:
+        # Fallback: status icon text
+        icon_text = _STATUS_ICONS.get(status, "[?]")
+        icon_x = box_x + (_BOX_SIZE - 24) // 2
+        icon_y = box_y + (_BOX_SIZE - 12) // 2
+        c.text((icon_x, icon_y), icon_text, fill=0)
 
     # Right column: info lines
-    # Categorize into large and small
     large_lines = []
     small_lines = []
     for line in info_lines:
@@ -100,7 +105,7 @@ def render(c: Canvas, data: dict) -> Image.Image:
         elif _is_small(lbl):
             small_lines.append(line)
         else:
-            large_lines.append(line)  # default to large for unknown labels
+            large_lines.append(line)
 
     y = 34
     max_y = c.h - layout.FOOTER_RESERVE - 2
@@ -112,8 +117,7 @@ def render(c: Canvas, data: dict) -> Image.Image:
         label = line.get("label", "")
         value = line.get("value", "")
         text = f"{label}: {value}" if label else value
-        # Truncate to right column width
-        text = c.truncate(text, 28)
+        text = c.truncate(text, 30)
         c.text((_RIGHT_COL_X, y), text, fill=0)
         y += _LINE_H
 
@@ -125,14 +129,14 @@ def render(c: Canvas, data: dict) -> Image.Image:
         right = small_lines[i + 1] if i + 1 < len(small_lines) else None
 
         left_text = f"{left.get('label', '')}: {left.get('value', '')}"
-        c.text((_RIGHT_COL_X, y), left_text[:16], fill=0)
+        c.text((_RIGHT_COL_X, y), left_text[:18], fill=0)
 
         if right:
             right_text = f"{right.get('label', '')}: {right.get('value', '')}"
-            c.text((_RIGHT_COL_X + 84, y), right_text[:16], fill=0)
+            c.text((_RIGHT_COL_X + 70, y), right_text[:18], fill=0)
         y += _LINE_H
 
-    # Footer: heartbeat time
+    # Footer: heartbeat time left, provider-model right
     footer_y = c.h - layout.LINE_H - 2
     ts = ""
     if heartbeat:
@@ -143,6 +147,8 @@ def render(c: Canvas, data: dict) -> Image.Image:
             pass
     if ts:
         c.text((MARGIN, footer_y), ts, fill=0)
+    if model_footer:
+        c.right_text(footer_y, model_footer[:28])
 
     return c.to_image()
 

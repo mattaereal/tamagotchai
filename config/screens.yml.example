@@ -18,11 +18,11 @@ screens:
         key: metadata.model
         max_length: 18
       - label: tok
-        template: "{0} in / {1} out"
+        template: "{0} / {1}"
         keys: [metadata.tokens_input, metadata.tokens_output]
         max_length: 20
       - label: cost
-        template: "${0}"
+        template: "{0}"
         keys: [metadata.cost_usd]
         max_length: 12
       - label: tool
@@ -44,9 +44,6 @@ screens:
       - label: commits
         key: metadata.commits
         max_length: 10
-      - label: project
-        key: metadata.project
-        max_length: 14
 
   # --- Optional: additional screens below ---
   #

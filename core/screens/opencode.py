@@ -64,6 +64,8 @@ class OpenCodeScreen(Screen):
                     value = value[: il.max_length - 3] + "..."
                 info_lines.append({"label": il.label, "value": value})
 
+        model_str = self._parse_model()
+
         data = {
             "name": self._config.name,
             "status": self._data.get("status", ""),
@@ -72,10 +74,36 @@ class OpenCodeScreen(Screen):
             "pending": self._data.get("pending", 0),
             "fetch_error": bool(self._data.get("__fetch_error")),
             "info_lines": info_lines,
+            "model_footer": model_str,
         }
 
         self._last_hash = self._data_hash()
         return tpl_render("opencode", data, canvas=Canvas(width, height))
+
+    def _parse_model(self) -> str:
+        """Parse metadata.model into provider/model footer string.
+
+        Uses model_format template (default: '%provider - %model').
+        Raw model: 'openrouter/moonshotai/kimi-k2.6'
+        Result:    'openrouter - kimi-k2.6'
+        """
+        raw = resolve_key(self._data, "metadata.model", "")
+        if not raw or not isinstance(raw, str):
+            return ""
+
+        fmt = self._config.model_format or "%provider - %model"
+        parts = raw.split("/")
+
+        provider = parts[0] if parts else ""
+        model = parts[-1] if parts else ""
+        distributor = "/".join(parts[1:-1]) if len(parts) > 2 else ""
+
+        return (
+            fmt.replace("%provider", provider)
+            .replace("%model", model)
+            .replace("%distributor", distributor)
+            .replace("%raw", raw)
+        )
 
     def _format_info_line(self, il) -> str:
         if il.template and il.keys:
