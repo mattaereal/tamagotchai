@@ -2,6 +2,7 @@
 
 import os
 import sys
+from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -26,6 +27,7 @@ def test_template_registry():
     assert "status_board" in n
     assert "tamagotchi" in n
     assert "agent_feed" in n
+    assert "opencode" in n
 
 
 def test_render_boot():
@@ -616,6 +618,76 @@ def test_create_screens_unknown_template_raises():
         assert False, "Should have raised ValueError"
     except ValueError:
         pass
+
+
+def test_render_opencode_working():
+    from ui.templates import render
+
+    img = render(
+        "opencode",
+        {
+            "name": "OpenCode",
+            "status": "working",
+            "message": "cmd: git commit",
+            "last_heartbeat": datetime.now(timezone.utc).isoformat(),
+            "pending": 1,
+            "metadata": {
+                "model": "anthropic/claude-3.7-sonnet",
+                "tokens_input": 1240,
+                "tokens_output": 340,
+                "tokens_total": 1580,
+                "cost_usd": 0.0042,
+                "project": "tamagotchai",
+                "message_count": 5,
+                "files_modified": 3,
+                "tool_name": "bash",
+                "session_duration_ms": 245000,
+                "lines_added": 45,
+                "lines_removed": 12,
+                "commits": 2,
+            },
+            "fetch_error": False,
+        },
+    )
+    assert img.size == (122, 250)
+    assert img.mode == "1"
+
+
+def test_render_opencode_hint():
+    from ui.templates import render
+
+    img = render(
+        "opencode",
+        {
+            "name": "OpenCode",
+            "status": "",
+            "message": "",
+            "last_heartbeat": "",
+            "pending": 0,
+            "metadata": {},
+            "fetch_error": True,
+        },
+    )
+    assert img.size == (122, 250)
+    assert img.mode == "1"
+
+
+def test_render_opencode_idle():
+    from ui.templates import render
+
+    img = render(
+        "opencode",
+        {
+            "name": "OpenCode",
+            "status": "idle",
+            "message": "",
+            "last_heartbeat": datetime.now(timezone.utc).isoformat(),
+            "pending": 0,
+            "metadata": {"project": "tamagotchai", "message_count": 12},
+            "fetch_error": False,
+        },
+    )
+    assert img.size == (122, 250)
 
 
 if __name__ == "__main__":

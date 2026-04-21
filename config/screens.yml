@@ -1,11 +1,11 @@
 # Tamagotchai screen definitions.
 # The scheduler cycles through each screen in order.
 #
-# Default: OpenCode agent feed.
+# Default: OpenCode dedicated detail screen.
+# Shows full metadata from opencode-plugin-tamagotchai.
 # To add more screens, duplicate the block and change the parameters,
 # or run: python app.py init
 #
-# The OpenCode agent feed polls your agent machine for live status.
 # If the agent is offline, the screen shows setup instructions.
 #
 # To configure the URL, replace 127.0.0.1 with your agent machine's IP:
@@ -14,10 +14,8 @@
 
 screens:
   - name: OpenCode
-    template: agent_feed
+    template: opencode
     poll_interval: 5
     display_duration: 15
     stale_threshold: 120
-    agents:
-      - name: OpenCode
-        url: http://127.0.0.1:7788/status
+    url: http://127.0.0.1:7788/status

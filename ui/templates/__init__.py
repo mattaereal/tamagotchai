@@ -56,4 +56,5 @@ from . import (
     status_board,
     tamagotchi,
     agent_feed,
+    opencode,
 )

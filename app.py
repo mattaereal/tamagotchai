@@ -19,6 +19,7 @@ from core.screens.base import Screen
 from core.screens.status_board import StatusBoardScreen, CategoryData
 from core.screens.tamagotchi import TamagotchiScreen
 from core.screens.agent_feed import AgentFeedScreen
+from core.screens.opencode import OpenCodeScreen
 from core.screens.device_status import DeviceStatusScreen
 from core.screens.ui_template import UiTemplateScreen
 from core.scheduler import screen_loop
@@ -162,6 +163,63 @@ def _inject_mock_agent_feed(screen: AgentFeedScreen, scenario: str = "mixed") ->
     screen._agents_data = scenarios.get(scenario, scenarios["mixed"])
 
 
+def _inject_mock_opencode(screen: OpenCodeScreen, scenario: str = "working") -> None:
+    scenarios = {
+        "working": {
+            "status": "working",
+            "message": "cmd: git commit",
+            "last_heartbeat": datetime.now(timezone.utc).isoformat(),
+            "pending": 1,
+            "metadata": {
+                "model": "anthropic/claude-3.7-sonnet",
+                "tokens_input": 1240,
+                "tokens_output": 340,
+                "tokens_total": 1580,
+                "cost_usd": 0.0042,
+                "project": "tamagotchai",
+                "message_count": 5,
+                "files_modified": 3,
+                "tool_name": "bash",
+                "session_duration_ms": 245000,
+                "lines_added": 45,
+                "lines_removed": 12,
+                "commits": 2,
+            },
+        },
+        "idle": {
+            "status": "idle",
+            "message": "",
+            "last_heartbeat": datetime.now(timezone.utc).isoformat(),
+            "pending": 0,
+            "metadata": {
+                "project": "tamagotchai",
+                "message_count": 12,
+            },
+        },
+        "waiting": {
+            "status": "waiting_input",
+            "message": "needs permission: bash",
+            "last_heartbeat": datetime.now(timezone.utc).isoformat(),
+            "pending": 1,
+            "metadata": {
+                "project": "tamagotchai",
+                "tool_name": "bash",
+            },
+        },
+        "error": {
+            "status": "error",
+            "message": "out of memory",
+            "last_heartbeat": datetime.now(timezone.utc).isoformat(),
+            "pending": 0,
+            "metadata": {},
+        },
+        "hint": {
+            "__fetch_error": True,
+        },
+    }
+    screen._data = scenarios.get(scenario, scenarios["working"])
+
+
 def _inject_mock_device_status(screen: DeviceStatusScreen) -> None:
     screen._data = {
         "hostname": "tamagotchai.local",
@@ -270,6 +328,12 @@ class DemoSequence:
         screen._last_hash = None
         img = screen.render(self._display.width, self._display.height)
         return self._render(f"Agents: {label}", img, 4.0)
+
+    def opencode(self, screen: OpenCodeScreen, scenario: str, label: str) -> str:
+        _inject_mock_opencode(screen, scenario)
+        screen._last_hash = None
+        img = screen.render(self._display.width, self._display.height)
+        return self._render(f"OpenCode: {label}", img, 4.0)
 
     def device_status(self, screen: DeviceStatusScreen) -> str:
         _inject_mock_device_status(screen)
@@ -398,6 +462,7 @@ def _run_demo(
     has_status = False
     has_tamagotchi = False
     has_agent_feed = False
+    has_opencode = False
     has_device_status = False
 
     for screen in screens:
@@ -425,6 +490,15 @@ def _run_demo(
             seq.agent_feed(screen, "waiting", "Waiting")
             seq.agent_feed(screen, "mixed", "Working")
 
+        elif isinstance(screen, OpenCodeScreen):
+            has_opencode = True
+            print("\n  === OpenCode ===")
+            seq.opencode(screen, "hint", "Setup Hint")
+            seq.opencode(screen, "idle", "Idle")
+            seq.opencode(screen, "waiting", "Waiting")
+            seq.opencode(screen, "working", "Working")
+            seq.opencode(screen, "error", "Error")
+
         elif isinstance(screen, DeviceStatusScreen):
             has_device_status = True
             print("\n  === Device Status ===")
@@ -438,7 +512,7 @@ def _run_demo(
         img = ds.render(display.width, display.height)
         seq._render("Device Status", img, 4.0)
 
-    if include_ui or not (has_status or has_tamagotchi or has_agent_feed):
+    if include_ui or not (has_status or has_tamagotchi or has_agent_feed or has_opencode):
         print("\n  === UI Templates ===")
         for name in ["idle", "error"]:
             seq.ui_template(name)

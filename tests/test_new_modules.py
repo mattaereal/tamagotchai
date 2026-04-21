@@ -868,6 +868,68 @@ def test_create_screens_agent_feed():
     assert isinstance(screens[0], AgentFeedScreen)
 
 
+def test_create_screens_opencode():
+    cfg = AppConfig(
+        display=DisplayConfig("mock"),
+        screens=[
+            ScreenConfig(
+                name="OpenCode",
+                template="opencode",
+                url="http://localhost:7788/status",
+            ),
+        ],
+    )
+    screens = create_screens(cfg)
+    assert len(screens) == 1
+    from core.screens.opencode import OpenCodeScreen
+
+    assert isinstance(screens[0], OpenCodeScreen)
+
+
+def test_opencode_screen_render():
+    from core.screens.opencode import OpenCodeScreen
+
+    sc = ScreenConfig(name="OpenCode", template="opencode", url="http://test")
+    screen = OpenCodeScreen(sc)
+    screen._data = {
+        "status": "working",
+        "message": "cmd: bash",
+        "last_heartbeat": datetime.now(timezone.utc).isoformat(),
+        "pending": 1,
+        "metadata": {
+            "model": "claude-3.7-sonnet",
+            "cost_usd": 0.0042,
+            "message_count": 5,
+        },
+    }
+    img = screen.render(122, 250)
+    assert img.size == (122, 250)
+    assert img.mode == "1"
+
+
+def test_opencode_screen_fetch_error():
+    from core.screens.opencode import OpenCodeScreen
+
+    sc = ScreenConfig(name="OpenCode", template="opencode", url="http://test")
+    screen = OpenCodeScreen(sc)
+    screen._data = {"__fetch_error": True}
+    img = screen.render(122, 250)
+    assert img.size == (122, 250)
+
+
+def test_opencode_screen_has_changed():
+    from core.screens.opencode import OpenCodeScreen
+
+    sc = ScreenConfig(name="OpenCode", template="opencode", url="http://test")
+    screen = OpenCodeScreen(sc)
+    assert screen.has_changed() is True
+    screen._data = {"status": "idle"}
+    screen.render(122, 250)
+    assert screen.has_changed() is False
+    screen._data = {"status": "working"}
+    assert screen.has_changed() is True
+
+
 def test_device_status_screen_render():
     from core.screens.device_status import DeviceStatusScreen
 

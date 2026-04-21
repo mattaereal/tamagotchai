@@ -37,6 +37,10 @@ def create_screens(config: AppConfig) -> List[Screen]:
             from .device_status import DeviceStatusScreen
 
             screens.append(DeviceStatusScreen(sc))
+        elif sc.template == "opencode":
+            from .opencode import OpenCodeScreen
+
+            screens.append(OpenCodeScreen(sc))
         else:
             from .ui_template import UiTemplateScreen
 
