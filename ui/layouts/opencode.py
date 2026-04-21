@@ -155,22 +155,21 @@ def render(c: Canvas, data: dict) -> Image.Image:
 
 def _render_hint(c: Canvas) -> None:
     """Render compact setup hint when agent is unreachable."""
-    y = 40
-
-    # Draw a box around the hint area
-    c.rect((MARGIN, y, c.w - MARGIN, y + 50), outline=0)
+    y = 36
 
     hint_lines = [
-        "[-] offline",
+        "[-] agent offline",
         "",
         "Install plugin:",
-        "~/.config/opencode/plugins/",
-        "Then start opencode.",
+        "  ~/.config/opencode/plugins/",
+        "  tamagotchai.ts",
+        "",
+        "Then restart opencode.",
     ]
     for line in hint_lines:
         if y + layout.LINE_H_SMALL > c.h - layout.FOOTER_RESERVE:
             break
-        c.text((MARGIN + 4, y), line, fill=0)
+        c.text((MARGIN, y), line, fill=0)
         y += layout.LINE_H_SMALL
 
     footer_y = c.h - layout.LINE_H - 2

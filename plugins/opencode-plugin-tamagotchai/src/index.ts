@@ -2,6 +2,7 @@ import http from "http"
 
 const PORT = parseInt(process.env.TAMAGOTCHAI_PORT ?? "7788", 10)
 const HOST = process.env.TAMAGOTCHAI_HOST ?? "0.0.0.0"
+const STALE_TIMEOUT_MS = 60_000 // auto-idle sessions after 60s of no events
 
 let server = null
 let logFn = null
@@ -130,8 +131,27 @@ function sessionToPayload(sessionID) {
   }
 }
 
+function cleanupStaleSessions() {
+  const now = Date.now()
+  let cleaned = 0
+  for (const [sid, s] of sessions.entries()) {
+    if (s.status === "idle") continue
+    const lastMs = new Date(s.last_heartbeat).getTime()
+    if (now - lastMs > STALE_TIMEOUT_MS) {
+      s.status = "idle"
+      s.pending = 0
+      s.message = ""
+      cleaned++
+    }
+  }
+  if (cleaned > 0) {
+    log("debug", `cleaned up ${cleaned} stale session(s)`)
+  }
+}
+
 function getLatestActivePayload() {
-  // If we have a latestSessionID that exists, use it
+  cleanupStaleSessions()
+  // If we have a latestSessionID that exists and is still active, use it
   if (latestSessionID && sessions.has(latestSessionID)) {
     const s = sessions.get(latestSessionID)
     if (s.status !== "idle") return sessionToPayload(latestSessionID)
@@ -160,6 +180,7 @@ function getLatestActivePayload() {
 }
 
 function getAllPayloads() {
+  cleanupStaleSessions()
   const list = []
   for (const sid of sessions.keys()) {
     list.push(sessionToPayload(sid))
@@ -416,7 +437,9 @@ export default async function TamagotchaiPlugin({ client, directory, project }) 
               s.metadata.model = info.modelID
             }
             s.message_count += 1
-            updateSessionHeartbeat(sid)
+            // If idle, mark as working since a message means activity
+            if (s.status === "idle") setWorking(sid, "processing")
+            else updateSessionHeartbeat(sid)
             break
           }
 
@@ -429,7 +452,9 @@ export default async function TamagotchaiPlugin({ client, directory, project }) 
               if (total !== null) s.metadata.tokens_total = (s.metadata.tokens_total ?? 0) + total
               if (cost !== null) s.metadata.cost_usd = (s.metadata.cost_usd ?? 0) + cost
             }
-            updateSessionHeartbeat(sid)
+            // If idle, mark as working since a message part means activity
+            if (s.status === "idle") setWorking(sid, "processing")
+            else updateSessionHeartbeat(sid)
             break
           }
 
@@ -458,14 +483,18 @@ export default async function TamagotchaiPlugin({ client, directory, project }) 
           case "file.edited": {
             const path = event.path ?? event.filePath ?? event.file ?? ""
             if (path) s.files_modified.add(path)
-            updateSessionHeartbeat(sid)
+            // Mark working if a file is being edited while idle
+            if (s.status === "idle") setWorking(sid, `file: ${path.split("/").pop()}`)
+            else updateSessionHeartbeat(sid)
             break
           }
 
           case "file.watcher.updated": {
             const path = event.path ?? event.filePath ?? event.file ?? ""
             if (path) s.files_modified.add(path)
-            updateSessionHeartbeat(sid)
+            // Mark working if files change while idle
+            if (s.status === "idle") setWorking(sid, `file: ${path.split("/").pop()}`)
+            else updateSessionHeartbeat(sid)
             break
           }
 
