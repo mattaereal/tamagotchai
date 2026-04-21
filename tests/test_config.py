@@ -27,7 +27,7 @@ def test_load_valid_config():
             f.write(
                 "screens:\n"
                 "  - name: Test\n"
-                "    template: status_board\n"
+                "    type: status_board\n"
                 "    categories:\n"
                 "      - name: TestService\n"
                 "        url: https://example.com/api/summary.json\n"
@@ -48,7 +48,7 @@ def test_load_valid_config():
         assert cfg.display.full_refresh_every_n_updates == 3
         assert len(cfg.screens) == 1
         s = cfg.screens[0]
-        assert s.template == "status_board"
+        assert s.type == "status_board"
         assert len(s.categories) == 1
         assert s.categories[0].name == "TestService"
 
@@ -97,8 +97,8 @@ def test_load_config_backend_profile_auto_size():
 
         cfg = load_config(td)
         assert cfg.display.backend == "waveshare_2in13bc"
-        assert cfg.display.width == 104
-        assert cfg.display.height == 212
+        assert cfg.display.width == 212
+        assert cfg.display.height == 104
 
 
 if __name__ == "__main__":

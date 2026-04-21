@@ -43,9 +43,14 @@ class Waveshare2in13V1Display(DisplayBackend):
         self._full_refresh_every = _get_display_value(
             config, "full_refresh_every_n_updates", 50
         )
+        self._rotation = _get_display_value(config, "rotation", 90)
         self._init_display()
-        self._width = self._epd.width
-        self._height = self._epd.height
+        if self._rotation and self._rotation % 360 != 0:
+            self._width = self._epd.height
+            self._height = self._epd.width
+        else:
+            self._width = self._epd.width
+            self._height = self._epd.height
         self._img: Image.Image = Image.new("1", (self._width, self._height), 255)
         self._draw = ImageDraw.Draw(self._img)
         logger.info(
@@ -88,6 +93,7 @@ class Waveshare2in13V1Display(DisplayBackend):
             logger.warning("EPD not initialized, skipping render_image")
             return
 
+        img = self._maybe_rotate(img, self._rotation)
         buf = self._epd.getbuffer(img)
         self._update_count += 1
 

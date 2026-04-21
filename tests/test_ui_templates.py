@@ -1,4 +1,4 @@
-"""Tests for ui.templates and the screen-cycling integration."""
+"""Tests for ui.layouts and the screen-cycling integration."""
 
 import os
 import sys
@@ -13,7 +13,7 @@ from PIL import Image
 
 
 def test_template_registry():
-    from ui.templates import names
+    from ui.layouts import names
 
     n = names()
     assert "boot" in n
@@ -31,31 +31,31 @@ def test_template_registry():
 
 
 def test_render_boot():
-    from ui.templates import render
+    from ui.layouts import render
 
     img = render("boot", {"name": "Test", "version": "2.0"})
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
     assert img.mode == "1"
 
 
 def test_render_setup():
-    from ui.templates import render
+    from ui.layouts import render
 
     img = render("setup")
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
     assert img.mode == "1"
 
 
 def test_render_status_dashboard():
-    from ui.templates import render
+    from ui.layouts import render
 
     img = render("status_dashboard")
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
     assert img.mode == "1"
 
 
 def test_render_status_dashboard_with_categories():
-    from ui.templates import render
+    from ui.layouts import render
 
     data = {
         "name": "AI Status",
@@ -78,12 +78,12 @@ def test_render_status_dashboard_with_categories():
         ],
     }
     img = render("status_dashboard", data)
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
     assert img.mode == "1"
 
 
 def test_render_status_dashboard_overflow():
-    from ui.templates import render
+    from ui.layouts import render
 
     categories = []
     for i in range(20):
@@ -94,19 +94,19 @@ def test_render_status_dashboard_overflow():
             }
         )
     img = render("status_dashboard", {"categories": categories})
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
 
 
 def test_render_detail():
-    from ui.templates import render
+    from ui.layouts import render
 
     img = render("detail")
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
     assert img.mode == "1"
 
 
 def test_render_detail_with_metrics():
-    from ui.templates import render
+    from ui.layouts import render
 
     data = {
         "name": "Claude API",
@@ -118,65 +118,65 @@ def test_render_detail_with_metrics():
         "last_check": "14:32",
     }
     img = render("detail", data)
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
 
 
 def test_render_message():
-    from ui.templates import render
+    from ui.layouts import render
 
     img = render("message")
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
     assert img.mode == "1"
 
 
 def test_render_message_string_body():
-    from ui.templates import render
+    from ui.layouts import render
 
     img = render("message", {"title": "WARN", "body": "Single line"})
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
 
 
 def test_render_message_no_title():
-    from ui.templates import render
+    from ui.layouts import render
 
     img = render("message", {"body": ["Line 1", "Line 2"]})
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
 
 
 def test_render_idle():
-    from ui.templates import render
+    from ui.layouts import render
 
     img = render("idle")
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
     assert img.mode == "1"
 
 
 def test_render_idle_with_sprite():
-    from ui.templates import render
+    from ui.layouts import render
 
     sprite = Image.new("1", (90, 90), 255)
     img = render("idle", {"name": "Bot", "mood": "working", "sprite": sprite})
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
 
 
 def test_render_idle_moods():
-    from ui.templates import render
+    from ui.layouts import render
 
     for mood in ("idle", "working", "error"):
         img = render("idle", {"mood": mood})
-        assert img.size == (122, 250)
+        assert img.size == (250, 122)
 
 
 def test_render_error():
-    from ui.templates import render
+    from ui.layouts import render
 
     img = render("error")
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
     assert img.mode == "1"
 
 
 def test_render_error_with_detail():
-    from ui.templates import render
+    from ui.layouts import render
 
     img = render(
         "error",
@@ -186,19 +186,19 @@ def test_render_error_with_detail():
             "last_ok": "14:30",
         },
     )
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
 
 
 def test_render_device_status():
-    from ui.templates import render
+    from ui.layouts import render
 
     img = render("device_status")
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
     assert img.mode == "1"
 
 
 def test_render_device_status_with_data():
-    from ui.templates import render
+    from ui.layouts import render
 
     img = render(
         "device_status",
@@ -219,19 +219,19 @@ def test_render_device_status_with_data():
             "version": "1.0.0",
         },
     )
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
 
 
 def test_render_status_board():
-    from ui.templates import render
+    from ui.layouts import render
 
     img = render("status_board")
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
     assert img.mode == "1"
 
 
 def test_render_status_board_with_data():
-    from ui.templates import render
+    from ui.layouts import render
 
     img = render(
         "status_board",
@@ -258,19 +258,19 @@ def test_render_status_board_with_data():
             "footer_text": "ok",
         },
     )
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
 
 
 def test_render_tamagotchi():
-    from ui.templates import render
+    from ui.layouts import render
 
     img = render("tamagotchi")
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
     assert img.mode == "1"
 
 
 def test_render_tamagotchi_with_data():
-    from ui.templates import render
+    from ui.layouts import render
 
     img = render(
         "tamagotchi",
@@ -287,11 +287,11 @@ def test_render_tamagotchi_with_data():
             "last_checked": "2026-04-19T14:32:05+00:00",
         },
     )
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
 
 
 def test_render_tamagotchi_fetch_error():
-    from ui.templates import render
+    from ui.layouts import render
 
     img = render(
         "tamagotchi",
@@ -305,19 +305,19 @@ def test_render_tamagotchi_fetch_error():
             "last_checked": "",
         },
     )
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
 
 
 def test_render_agent_feed():
-    from ui.templates import render
+    from ui.layouts import render
 
     img = render("agent_feed")
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
     assert img.mode == "1"
 
 
 def test_render_agent_feed_with_data():
-    from ui.templates import render
+    from ui.layouts import render
 
     img = render(
         "agent_feed",
@@ -351,11 +351,11 @@ def test_render_agent_feed_with_data():
             "num_agents": 3,
         },
     )
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
 
 
 def test_render_agent_feed_metadata_only():
-    from ui.templates import render
+    from ui.layouts import render
 
     img = render(
         "agent_feed",
@@ -381,11 +381,11 @@ def test_render_agent_feed_metadata_only():
             "num_agents": 1,
         },
     )
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
 
 
 def test_render_agent_feed_fallback_metadata():
-    from ui.templates import render
+    from ui.layouts import render
 
     img = render(
         "agent_feed",
@@ -407,11 +407,11 @@ def test_render_agent_feed_fallback_metadata():
             "num_agents": 1,
         },
     )
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
 
 
 def test_render_agent_feed_show_hint():
-    from ui.templates import render
+    from ui.layouts import render
 
     # When all agents failed, show_hint triggers setup instructions
     img = render(
@@ -431,11 +431,11 @@ def test_render_agent_feed_show_hint():
             "show_hint": True,
         },
     )
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
 
 
 def test_render_agent_feed_mixed_and_hint():
-    from ui.templates import render
+    from ui.layouts import render
 
     # show_hint=False because not all agents failed
     img = render(
@@ -462,11 +462,11 @@ def test_render_agent_feed_mixed_and_hint():
             "show_hint": False,
         },
     )
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
 
 
 def test_template_unknown_raises():
-    from ui.templates import render
+    from ui.layouts import render
 
     try:
         render("nonexistent")
@@ -476,7 +476,7 @@ def test_template_unknown_raises():
 
 
 def test_template_custom_canvas():
-    from ui.templates import render
+    from ui.layouts import render
     from ui.canvas import Canvas
 
     c = Canvas(200, 400)
@@ -514,10 +514,10 @@ def test_ui_template_screen_render():
     from core.config import ScreenConfig
     from core.screens.ui_template import UiTemplateScreen
 
-    cfg = ScreenConfig(name="Boot", template="ui:boot")
+    cfg = ScreenConfig(name="Boot", type="ui", layout="boot")
     screen = UiTemplateScreen(cfg, "boot")
-    img = screen.render(122, 250)
-    assert img.size == (122, 250)
+    img = screen.render(250, 122)
+    assert img.size == (250, 122)
     assert img.mode == "1"
 
 
@@ -525,10 +525,10 @@ def test_ui_template_screen_has_changed():
     from core.config import ScreenConfig
     from core.screens.ui_template import UiTemplateScreen
 
-    cfg = ScreenConfig(name="Boot", template="ui:boot")
+    cfg = ScreenConfig(name="Boot", type="ui", layout="boot")
     screen = UiTemplateScreen(cfg, "boot")
     assert screen.has_changed() is True
-    screen.render(122, 250)
+    screen.render(250, 122)
     assert screen.has_changed() is False
 
 
@@ -537,58 +537,48 @@ def test_ui_template_screen_poll_interval():
     from core.screens.ui_template import UiTemplateScreen
 
     cfg = ScreenConfig(
-        name="Boot", template="ui:boot", poll_interval=60, display_duration=10
+        name="Boot", type="ui", layout="boot", poll_interval=60, display_duration=10
     )
     screen = UiTemplateScreen(cfg, "boot")
     assert screen.poll_interval == 60
     assert screen.display_duration == 10
 
 
-def test_ui_template_screen_is_ui_template():
+def test_ui_template_screen_layout_validation():
+    from core.config import ScreenConfig
     from core.screens.ui_template import UiTemplateScreen
 
-    assert UiTemplateScreen.is_ui_template("ui:boot") is True
-    assert UiTemplateScreen.is_ui_template("ui:error") is True
-    assert UiTemplateScreen.is_ui_template("boot") is True
-    assert UiTemplateScreen.is_ui_template("idle") is True
-    assert UiTemplateScreen.is_ui_template("status_board") is False
-    assert UiTemplateScreen.is_ui_template("tamagotchi") is False
-    assert UiTemplateScreen.is_ui_template("nonexistent_xyz") is False
+    # layout is required for type: ui
+    cfg = ScreenConfig(name="Boot", type="ui", layout="boot")
+    screen = UiTemplateScreen(cfg, "boot")
+    assert screen._template_name == "boot"
 
 
-def test_ui_template_screen_strip_prefix():
-    from core.screens.ui_template import UiTemplateScreen
-
-    assert UiTemplateScreen.strip_prefix("ui:boot") == "boot"
-    assert UiTemplateScreen.strip_prefix("ui:error") == "error"
-    assert UiTemplateScreen.strip_prefix("boot") == "boot"
-
-
-def test_create_screens_with_ui_template():
+def test_create_screens_with_ui_layout():
     from core.config import AppConfig, ScreenConfig
     from core.screens import create_screens
     from core.screens.ui_template import UiTemplateScreen
 
-    cfg = AppConfig(screens=[ScreenConfig(name="Boot", template="ui:boot")])
+    cfg = AppConfig(screens=[ScreenConfig(name="Boot", type="ui", layout="boot")])
     screens = create_screens(cfg)
     assert len(screens) == 1
     assert isinstance(screens[0], UiTemplateScreen)
     assert screens[0]._template_name == "boot"
 
 
-def test_create_screens_with_bare_ui_template():
+def test_create_screens_with_ui_layout_idle():
     from core.config import AppConfig, ScreenConfig
     from core.screens import create_screens
     from core.screens.ui_template import UiTemplateScreen
 
-    cfg = AppConfig(screens=[ScreenConfig(name="Idle", template="idle")])
+    cfg = AppConfig(screens=[ScreenConfig(name="Idle", type="ui", layout="idle")])
     screens = create_screens(cfg)
     assert len(screens) == 1
     assert isinstance(screens[0], UiTemplateScreen)
     assert screens[0]._template_name == "idle"
 
 
-def test_create_screens_mixed_templates():
+def test_create_screens_mixed_types():
     from core.config import AppConfig, ScreenConfig
     from core.screens import create_screens
     from core.screens.ui_template import UiTemplateScreen
@@ -596,9 +586,9 @@ def test_create_screens_mixed_templates():
 
     cfg = AppConfig(
         screens=[
-            ScreenConfig(name="Boot", template="ui:boot"),
-            ScreenConfig(name="Status", template="status_board"),
-            ScreenConfig(name="Idle", template="idle"),
+            ScreenConfig(name="Boot", type="ui", layout="boot"),
+            ScreenConfig(name="Status", type="status_board"),
+            ScreenConfig(name="Idle", type="ui", layout="idle"),
         ]
     )
     screens = create_screens(cfg)
@@ -608,11 +598,11 @@ def test_create_screens_mixed_templates():
     assert isinstance(screens[2], UiTemplateScreen)
 
 
-def test_create_screens_unknown_template_raises():
+def test_create_screens_unknown_type_raises():
     from core.config import AppConfig, ScreenConfig
     from core.screens import create_screens
 
-    cfg = AppConfig(screens=[ScreenConfig(name="Bad", template="unknown_xyz")])
+    cfg = AppConfig(screens=[ScreenConfig(name="Bad", type="unknown_xyz")])
     try:
         create_screens(cfg)
         assert False, "Should have raised ValueError"
@@ -621,7 +611,7 @@ def test_create_screens_unknown_template_raises():
 
 
 def test_render_opencode_working():
-    from ui.templates import render
+    from ui.layouts import render
 
     img = render(
         "opencode",
@@ -649,12 +639,12 @@ def test_render_opencode_working():
             "fetch_error": False,
         },
     )
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
     assert img.mode == "1"
 
 
 def test_render_opencode_hint():
-    from ui.templates import render
+    from ui.layouts import render
 
     img = render(
         "opencode",
@@ -668,12 +658,12 @@ def test_render_opencode_hint():
             "fetch_error": True,
         },
     )
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
     assert img.mode == "1"
 
 
 def test_render_opencode_idle():
-    from ui.templates import render
+    from ui.layouts import render
 
     img = render(
         "opencode",
@@ -687,7 +677,7 @@ def test_render_opencode_idle():
             "fetch_error": False,
         },
     )
-    assert img.size == (122, 250)
+    assert img.size == (250, 122)
 
 
 if __name__ == "__main__":

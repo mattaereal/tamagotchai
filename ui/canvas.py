@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from PIL import Image, ImageDraw
 
-W: int = 122
-H: int = 250
+W: int = 250
+H: int = 122
 MARGIN: int = 4
 
 

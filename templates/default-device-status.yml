@@ -1,0 +1,8 @@
+# Default device status preset.
+# Use in screens.yml:
+#   - name: Pi
+#     template: default-device-status
+
+type: device_status
+poll_interval: 30
+display_duration: 15

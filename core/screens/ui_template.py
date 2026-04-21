@@ -1,8 +1,7 @@
-"""UiTemplateScreen - wraps a ui/ template as a Screen instance.
+"""UiTemplateScreen - wraps a ui/layout as a Screen instance.
 
-Allows any registered ui/ template to participate in the screen-cycling
-scheduler. Use template names like 'ui:boot', 'ui:error', 'ui:idle' etc.
-in config YAML.
+Allows any registered ui/layout to participate in the screen-cycling
+scheduler. Use type: ui with layout: <name> in config YAML.
 
 Data can be provided statically via ScreenConfig or fetched from a url
 as raw JSON (same pattern as tamagotchi's json fetch).
@@ -20,13 +19,13 @@ from PIL import Image
 from .base import Screen
 from ..config import ScreenConfig, resolve_key
 from ui.canvas import Canvas
-from ui.templates import get as get_template, names as template_names
+from ui.layouts import get as get_template, names as layout_names
 
 logger = logging.getLogger(__name__)
 
 
 class UiTemplateScreen(Screen):
-    """Screen backed by a ui/ template function."""
+    """Screen backed by a ui/layout render function."""
 
     def __init__(self, config: ScreenConfig, template_name: str):
         self._config = config
@@ -109,15 +108,5 @@ class UiTemplateScreen(Screen):
         raw = str(sorted(self._data.items()))
         return hashlib.md5(raw.encode()).hexdigest()
 
-    @staticmethod
-    def is_ui_template(template_name: str) -> bool:
-        if template_name.startswith("ui:"):
-            return True
-        core = {"status_board", "tamagotchi"}
-        return template_name not in core and template_name in template_names()
-
-    @staticmethod
-    def strip_prefix(template_name: str) -> str:
-        if template_name.startswith("ui:"):
-            return template_name[3:]
-        return template_name
+    # Legacy helper methods removed as part of the template -> type refactor.
+    # UiTemplateScreen is now explicitly instantiated via type: ui + layout: <name>.

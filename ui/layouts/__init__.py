@@ -1,6 +1,6 @@
-"""Template registry for e-paper screen templates.
+"""Layout registry for e-paper screen layouts.
 
-Maps template name strings to render functions.
+Maps layout name strings to render functions.
 Each render function takes (canvas, data) and returns a PIL Image.
 """
 

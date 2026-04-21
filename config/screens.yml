@@ -13,7 +13,7 @@
 
 screens:
   - name: OpenCode
-    template: opencode
+    type: opencode
     poll_interval: 5
     display_duration: 15
     stale_threshold: 120

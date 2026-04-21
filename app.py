@@ -281,10 +281,10 @@ class DemoSequence:
         return path
 
     def boot(self) -> str:
-        from ui.templates import render as tpl_render
+        from ui.layouts import render as layout_render
         from ui.preview import MOCK_DATA
 
-        img = tpl_render("boot", MOCK_DATA["boot"])
+        img = layout_render("boot", MOCK_DATA["boot"])
         return self._render("Boot", img, 3.0)
 
     def status_board_ok(self, screen: StatusBoardScreen) -> str:
@@ -342,26 +342,26 @@ class DemoSequence:
         return self._render("Device Status", img, 4.0)
 
     def ui_template(self, name: str) -> str:
-        from ui.templates import render as tpl_render
+        from ui.layouts import render as layout_render
         from ui.preview import MOCK_DATA
 
         data = MOCK_DATA.get(name, {"name": name})
-        img = tpl_render(name, data)
+        img = layout_render(name, data)
         label = f"ui:{name}"
         return self._render(label, img, 3.0)
 
     def idle_screen(self) -> str:
-        from ui.templates import render as tpl_render
+        from ui.layouts import render as layout_render
         from ui.preview import MOCK_DATA
 
-        img = tpl_render("idle", MOCK_DATA["idle"])
+        img = layout_render("idle", MOCK_DATA["idle"])
         return self._render("Idle", img, 3.0)
 
     def error_screen(self) -> str:
-        from ui.templates import render as tpl_render
+        from ui.layouts import render as layout_render
         from ui.preview import MOCK_DATA
 
-        img = tpl_render("error", MOCK_DATA["error"])
+        img = layout_render("error", MOCK_DATA["error"])
         return self._render("Error", img, 3.0)
 
     @property
@@ -506,7 +506,7 @@ def _run_demo(
 
     if not has_device_status:
         print("\n  === Device Status ===")
-        ds = DeviceStatusScreen(ScreenConfig(name="Device", template="device_status"))
+        ds = DeviceStatusScreen(ScreenConfig(name="Device", type="device_status"))
         _inject_mock_device_status(ds)
         ds.last_hash = None
         img = ds.render(display.width, display.height)

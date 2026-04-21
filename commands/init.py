@@ -35,7 +35,7 @@ DISPLAY_CHOICES = [
     ("waveshare_2in13g", 'Waveshare 2.13" G (4-color, 122x250, no partial)'),
 ]
 
-TEMPLATE_CHOICES = [
+TYPE_CHOICES = [
     ("status_board", "Category/bullet status display"),
     ("tamagotchi", "Character-based agent monitor"),
     ("agent_feed", "Multi-agent compact list"),
@@ -142,7 +142,7 @@ def _configure_category() -> Dict[str, Any]:
 
 def _configure_status_board() -> Dict[str, Any]:
     screen: Dict[str, Any] = {}
-    screen["template"] = "status_board"
+    screen["type"] = "status_board"
     screen["poll_interval"] = int(_prompt("Poll interval (seconds)", "30"))
     screen["display_duration"] = int(_prompt("Display duration (seconds)", "30"))
 
@@ -161,7 +161,7 @@ def _configure_status_board() -> Dict[str, Any]:
 
 def _configure_tamagotchi() -> Dict[str, Any]:
     screen: Dict[str, Any] = {}
-    screen["template"] = "tamagotchi"
+    screen["type"] = "tamagotchi"
     screen["url"] = _prompt("JSON endpoint URL")
     screen["poll_interval"] = int(_prompt("Poll interval (seconds)", "5"))
     screen["display_duration"] = int(_prompt("Display duration (seconds)", "15"))
@@ -208,7 +208,7 @@ def _configure_tamagotchi() -> Dict[str, Any]:
 
 def _configure_agent_feed() -> Dict[str, Any]:
     screen: Dict[str, Any] = {}
-    screen["template"] = "agent_feed"
+    screen["type"] = "agent_feed"
     screen["poll_interval"] = int(_prompt("Poll interval (seconds)", "5"))
     screen["display_duration"] = int(_prompt("Display duration (seconds)", "30"))
     screen["stale_threshold"] = int(_prompt("Stale threshold (seconds)", "120"))
@@ -233,16 +233,16 @@ def _configure_screens() -> List[Dict[str, Any]]:
     for i in range(num):
         print(f"\n--- Screen {i + 1} ---")
         name = _prompt("Screen name", f"Screen {i + 1}")
-        template = _choose("Template", TEMPLATE_CHOICES, default_idx=0)
+        type_choice = _choose("Type", TYPE_CHOICES, default_idx=0)
 
-        if template == "status_board":
+        if type_choice == "status_board":
             screen = _configure_status_board()
-        elif template == "tamagotchi":
+        elif type_choice == "tamagotchi":
             screen = _configure_tamagotchi()
-        elif template == "agent_feed":
+        elif type_choice == "agent_feed":
             screen = _configure_agent_feed()
         else:
-            screen = {"template": template}
+            screen = {"type": type_choice}
 
         screen["name"] = name
         screens.append(screen)
@@ -284,7 +284,7 @@ def run_init(config_dir: str = "config", force: bool = False) -> None:
     print(f"  timezone: {app_config['timezone']}")
     print(f"\nScreens: {len(screens_list)}")
     for s in screens_list:
-        print(f"  - {s.get('name', '?')} ({s.get('template', '?')})")
+        print(f"  - {s.get('name', '?')} ({s.get('type', '?')})")
 
     if not _confirm("\nWrite config files?", default=True):
         print("Aborted.")

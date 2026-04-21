@@ -27,30 +27,30 @@ def _cleanup_pid():
 
 
 def test_input_manager_no_tamagotchi():
-    sc = ScreenConfig(name="Test", template="status_board")
+    sc = ScreenConfig(name="Test", type="status_board")
     screens = [StatusBoardScreen(sc)]
     mgr = InputManager(screens)
     assert mgr.tamagotchi_idx is None
 
 
 def test_input_manager_with_tamagotchi():
-    sc1 = ScreenConfig(name="Test", template="status_board")
-    sc2 = ScreenConfig(name="Lotus", template="tamagotchi", url="http://test")
+    sc1 = ScreenConfig(name="Test", type="status_board")
+    sc2 = ScreenConfig(name="Lotus", type="tamagotchi", url="http://test")
     screens = [StatusBoardScreen(sc1), TamagotchiScreen(sc2)]
     mgr = InputManager(screens)
     assert mgr.tamagotchi_idx == 1
 
 
 def test_input_manager_tamagotchi_first():
-    sc1 = ScreenConfig(name="Lotus", template="tamagotchi", url="http://test")
-    sc2 = ScreenConfig(name="Test", template="status_board")
+    sc1 = ScreenConfig(name="Lotus", type="tamagotchi", url="http://test")
+    sc2 = ScreenConfig(name="Test", type="status_board")
     screens = [TamagotchiScreen(sc1), StatusBoardScreen(sc2)]
     mgr = InputManager(screens)
     assert mgr.tamagotchi_idx == 0
 
 
 def test_input_manager_events_start_cleared():
-    sc = ScreenConfig(name="Test", template="status_board")
+    sc = ScreenConfig(name="Test", type="status_board")
     screens = [StatusBoardScreen(sc)]
     mgr = InputManager(screens)
     assert not mgr.next_screen.is_set()
@@ -58,7 +58,7 @@ def test_input_manager_events_start_cleared():
 
 
 def test_input_manager_pid_file():
-    sc = ScreenConfig(name="Test", template="status_board")
+    sc = ScreenConfig(name="Test", type="status_board")
     screens = [StatusBoardScreen(sc)]
     mgr = InputManager(screens)
     try:
@@ -74,7 +74,7 @@ def test_input_manager_pid_file():
 
 
 def test_input_manager_cleanup_removes_pid():
-    sc = ScreenConfig(name="Test", template="status_board")
+    sc = ScreenConfig(name="Test", type="status_board")
     screens = [StatusBoardScreen(sc)]
     mgr = InputManager(screens)
     loop = asyncio.new_event_loop()
@@ -89,7 +89,7 @@ def test_input_manager_cleanup_removes_pid():
 
 
 def test_sigusr1_sets_next_screen():
-    sc = ScreenConfig(name="Test", template="status_board")
+    sc = ScreenConfig(name="Test", type="status_board")
     screens = [StatusBoardScreen(sc)]
     mgr = InputManager(screens, debounce=0.0)
 
@@ -110,7 +110,7 @@ def test_sigusr1_sets_next_screen():
 
 
 def test_sigusr2_sets_jump_tamagotchi():
-    sc = ScreenConfig(name="Test", template="status_board")
+    sc = ScreenConfig(name="Test", type="status_board")
     screens = [StatusBoardScreen(sc)]
     mgr = InputManager(screens, debounce=0.0)
 
@@ -131,7 +131,7 @@ def test_sigusr2_sets_jump_tamagotchi():
 
 
 def test_debounce_ignores_rapid_signals():
-    sc = ScreenConfig(name="Test", template="status_board")
+    sc = ScreenConfig(name="Test", type="status_board")
     screens = [StatusBoardScreen(sc)]
     mgr = InputManager(screens, debounce=0.5)
 
@@ -173,7 +173,7 @@ def test_interruptible_sleep_no_manager():
 
 
 def test_interruptible_sleep_full_duration():
-    sc = ScreenConfig(name="Test", template="status_board")
+    sc = ScreenConfig(name="Test", type="status_board")
     screens = [StatusBoardScreen(sc)]
     mgr = InputManager(screens)
 
@@ -190,7 +190,7 @@ def test_interruptible_sleep_full_duration():
 
 
 def test_interruptible_sleep_interrupted_by_next_screen():
-    sc = ScreenConfig(name="Test", template="status_board")
+    sc = ScreenConfig(name="Test", type="status_board")
     screens = [StatusBoardScreen(sc)]
     mgr = InputManager(screens)
 
@@ -217,7 +217,7 @@ def test_interruptible_sleep_interrupted_by_next_screen():
 
 
 def test_interruptible_sleep_interrupted_by_jump_tamagotchi():
-    sc = ScreenConfig(name="Test", template="status_board")
+    sc = ScreenConfig(name="Test", type="status_board")
     screens = [StatusBoardScreen(sc)]
     mgr = InputManager(screens)
 

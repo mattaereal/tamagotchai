@@ -50,3 +50,18 @@ class DisplayBackend(abc.ABC):
     @abc.abstractmethod
     def height(self) -> int:
         raise NotImplementedError
+
+    @staticmethod
+    def _maybe_rotate(img: Image.Image, rotation: int) -> Image.Image:
+        """Rotate image if needed for physical panel orientation.
+
+        Args:
+            img: PIL Image in mode '1'.
+            rotation: Degrees to rotate (0, 90, 180, 270).
+
+        Returns:
+            Rotated image or original if rotation is 0.
+        """
+        if rotation and rotation % 360 != 0:
+            return img.rotate(rotation, expand=True)
+        return img

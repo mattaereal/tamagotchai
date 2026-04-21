@@ -1,0 +1,26 @@
+# Default tamagotchi agent monitor preset.
+# Use in screens.yml:
+#   - name: My Agent
+#     template: default-tamagotchi
+#     url: http://your-agent:8080/status
+
+type: tamagotchi
+poll_interval: 5
+display_duration: 15
+stale_threshold: 120
+mood_map:
+  key: status
+  map:
+    idle: idle
+    working: working
+    waiting_input: working
+    stuck: error
+    error: error
+    success: success
+    offline: error
+  fallback: idle
+info_lines:
+  - label: status
+    key: status
+  - label: pending
+    key: pending

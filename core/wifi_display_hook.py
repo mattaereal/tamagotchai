@@ -45,7 +45,7 @@ def show_setup_info(line1: str, line2: str, line3: str) -> None:
 
     try:
         from ui.canvas import Canvas
-        from ui.templates.setup import render
+        from ui.layouts.setup import render
 
         data = {}
         if line1 or line2 or line3:

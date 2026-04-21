@@ -7,11 +7,12 @@ import os
 from PIL import Image
 
 from .. import W, H
-from . import render_template, templates
+from . import render_template
+from .. import layouts as _layouts
 
 
 def render_contact_sheet(output_path: str = "out/screens/contact_sheet.png") -> str:
-    names = templates.names()
+    names = _layouts.names()
     if not names:
         raise RuntimeError("No templates registered")
 

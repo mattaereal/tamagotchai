@@ -50,7 +50,7 @@ python app.py preview
 # Doctor check (will show SPI/GPIO as missing - this is fine)
 python app.py doctor
 
-# Preview all ui/ templates
+# Preview all ui/ layouts
 python app.py ui-preview
 ```
 
@@ -62,15 +62,15 @@ The project is organized into top-level packages with clear separation of concer
 
 | Package | Purpose | Depends on |
 |---|---|---|
-| `core/` | App runtime: config, display drivers, providers, screen data-fetching, scheduler | `ui/` (templates only, for render delegation) |
-| `ui/` | All rendering: canvas, layout, templates, assets, image tools | Nothing (zero inbound deps) |
+| `core/` | App runtime: config, display drivers, providers, screen data-fetching, scheduler | `ui/` (layouts only, for render delegation) |
+| `ui/` | All rendering: canvas, layout, layouts, assets, image tools | Nothing (zero inbound deps) |
 | `commands/` | CLI commands (init wizard) | `core/` (config) |
 | `config/` | YAML configuration files | N/A (data only) |
 | `wifi/` | WiFi onboarding subsystem (self-contained Flask app) | Nothing at import time |
 
 Dependency flow: `ui/` (leaf) <- `core/` <- `commands/` <- `app.py` (root)
 
-`core/screens/` delegates all pixel rendering to `ui/templates/`. Each screen's `render()` method converts its internal data to a plain dict and calls a registered template function. This keeps all Canvas/layout/assets usage inside `ui/` and all data-fetching/config logic inside `core/`.
+`core/screens/` delegates all pixel rendering to `ui/layouts/`. Each screen's `render()` method converts its internal data to a plain dict and calls a registered layout function. This keeps all Canvas/layout/assets usage inside `ui/` and all data-fetching/config logic inside `core/`.
 
 ### Configuration
 
@@ -84,9 +84,11 @@ Config is split across three files in `config/`:
 
 Loading merges all three. Each file is optional -- defaults are used for any missing file. The `python app.py init` wizard generates all three interactively.
 
-### Template System
+### Screen Types
 
-Screens are defined in YAML config using templates:
+Screens are defined in YAML config using a `type` that determines the data contract and processing logic. Each type delegates pixel rendering to a `layout` in `ui/layouts/`.
+
+**Available types:**
 
 1. **`status_board`** - Category/bullet status display
    - Each category has a url, type (statuspage/json), icon, and items
@@ -94,19 +96,21 @@ Screens are defined in YAML config using templates:
    - `json`: fetches raw JSON, maps item keys to statuses via convention (dot-notation via `resolve_key()`)
    - Built-in icons: `anthropic`, `openai`, `lotus`, `generic`
    - Custom icons: pass a path to a 12x12 PNG file
+   - Landscape layout: categories as horizontal bands with item chips; `+N more` overflow indicator
 
 2. **`tamagotchi`** - Character-based agent monitor
    - Single `url` returns JSON; all key access uses dot-notation via `resolve_key()`
    - Configurable sprites (idle/working/error/success) from PNG files
    - `mood_map` defines which JSON field drives sprite selection
-   - `info_lines` define what data appears below the sprite
+   - `info_lines` define what data appears on the right panel
    - `stale_threshold` (seconds, default 120): if `last_heartbeat` is older than this, status is overwritten to `"offline"`
+   - Landscape layout: framed sprite left (70x70), name below, info lines stacked on right
 
 3. **`agent_feed`** - Multi-agent compact list
    - Reads multiple agent URLs in parallel (`agents` list in config)
    - Each agent serves the Standard Agent Status JSON (see below)
-   - Renders a compact row per agent: icon + name + status + message
-   - When `metadata` includes `model`, `tokens_total`/`tokens_input`/`tokens_output`, or `cost_usd`, renders a compact metadata line (e.g. `claude-3.7  $0.004`)
+   - Renders a compact horizontal card per agent: icon + name + status + message
+   - Metadata bar on second line: model, cost, tokens
    - Applies stale detection per-agent using `stale_threshold`
    - Status icons: `[+]` idle/ok, `[!]` working/waiting_input, `[-]` error/stuck/offline, `[*]` success
 
@@ -114,27 +118,59 @@ Screens are defined in YAML config using templates:
    - Shows hostname, IP, SSID, BSSID, WiFi status, signal, CPU temp, memory, disk, uptime, battery, PID, version
    - No URL needed -- gathers data from local system calls (stdlib + subprocess)
    - Battery reads from PiSugar (requires `pisugar` pip package on Pi)
+   - Landscape layout: top bar hostname + WiFi, grid of vitals with mini progress bars, version + timestamp footer
 
-5. **`ui:<name>`** - Any registered ui/ template (boot, setup, idle, error, message, etc.)
+5. **`opencode`** - OpenCode agent detail
+   - Dedicated single-agent screen with split panel layout
+   - Left: framed status icon box + agent name
+   - Right: info_lines from config, large fields (model, message, tool) on their own lines, small fields (cost, tokens, files) paired
+   - Automatic value formatting via `ui/formatters.py`
+
+6. **`ui`** - Any registered ui/layout (boot, setup, idle, error, message, etc.)
+   - Requires `layout: <name>` to specify which layout to render
    - Wrapped as `UiTemplateScreen` for the scheduler
-   - Can also use bare name (e.g. `template: idle`) if it matches a ui/ template
+   - Example: `type: ui`, `layout: boot`
+
+### YAML Template Presets
+
+A `template` is a YAML preset file in the `templates/` directory that pre-configures a screen with sensible defaults for a given `type`. Presets are applied before screen-specific overrides.
+
+Example preset (`templates/default-opencode.yml`):
+```yaml
+type: opencode
+poll_interval: 5
+display_duration: 15
+stale_threshold: 120
+url: http://127.0.0.1:7788/status
+info_lines:
+  - label: model
+    key: metadata.model
+```
+
+Used in `screens.yml`:
+```yaml
+screens:
+  - name: OpenCode
+    template: default-opencode
+    url: http://my-agent:7788/status   # overrides preset url
+```
 
 ### Display Backends
 
 All 2.13" Waveshare variants are supported:
 
-| Backend | Display | Resolution | Partial refresh |
+| Backend | Display | Logical Resolution | Partial refresh |
 |---|---|---|---|
-| `mock` | PNG file output | 122x250 | N/A |
-| `waveshare_2in13_v1` | V1 (B/W) | 122x250 | Yes (LUT swap) |
-| `waveshare_2in13_v2` | V2 (B/W) | 122x250 | Yes |
-| `waveshare_2in13_v3` | V3 (B/W) | 122x250 | Yes |
-| `waveshare_2in13_v4` | V4 (B/W, fast refresh) | 122x250 | Yes |
-| `waveshare_2in13bc` | BC (B/W/R, 104x212) | 104x212 | No |
-| `waveshare_2in13b_v3` | B V3 (B/W/R) | 122x250 | No |
-| `waveshare_2in13b_v4` | B V4 (B/W/R) | 122x250 | No |
-| `waveshare_2in13d` | D (B/W, flexible, 104x212) | 104x212 | Yes |
-| `waveshare_2in13g` | G (4-color) | 122x250 | No |
+| `mock` | PNG file output | 250x122 | N/A |
+| `waveshare_2in13_v1` | V1 (B/W) | 250x122 | Yes (LUT swap) |
+| `waveshare_2in13_v2` | V2 (B/W) | 250x122 | Yes |
+| `waveshare_2in13_v3` | V3 (B/W) | 250x122 | Yes |
+| `waveshare_2in13_v4` | V4 (B/W, fast refresh) | 250x122 | Yes |
+| `waveshare_2in13bc` | BC (B/W/R) | 212x104 | No |
+| `waveshare_2in13b_v3` | B V3 (B/W/R) | 250x122 | No |
+| `waveshare_2in13b_v4` | B V4 (B/W/R) | 250x122 | No |
+| `waveshare_2in13d` | D (B/W, flexible) | 212x104 | Yes |
+| `waveshare_2in13g` | G (4-color) | 250x122 | No |
 
 Width/height are auto-set from the backend profile in `DISPLAY_PROFILES` (defined in `config.py`).
 
@@ -151,11 +187,12 @@ core/
   scheduler.py           # Async screen-cycling loop with input interruption
   screens/
     base.py              # Screen ABC (fetch, render, poll_interval, display_duration, has_changed)
-    status_board.py      # Status board screen (fetch + render delegates to ui/templates/status_board)
-    tamagotchi.py        # Tamagotchi screen (fetch + mood resolve, render delegates to ui/templates/tamagotchi)
-    agent_feed.py        # Agent feed screen (fetch, render delegates to ui/templates/agent_feed)
-    device_status.py     # Device status screen (local system calls, render delegates to ui/templates/device_status)
-    ui_template.py       # UiTemplateScreen - wraps ui/ templates as Screen instances
+    status_board.py      # Status board screen (fetch + render delegates to ui/layouts/status_board)
+    tamagotchi.py        # Tamagotchi screen (fetch + mood resolve, render delegates to ui/layouts/tamagotchi)
+    agent_feed.py        # Agent feed screen (fetch, render delegates to ui/layouts/agent_feed)
+    device_status.py     # Device status screen (local system calls, render delegates to ui/layouts/device_status)
+    opencode.py          # OpenCode dedicated detail (fetch, render delegates to ui/layouts/opencode)
+    ui_template.py       # UiTemplateScreen - wraps ui/ layouts as Screen instances
   display/
     base.py              # DisplayBackend ABC (render, render_image, flush, close)
     mock_png.py          # PNG file output (for development)
@@ -172,24 +209,26 @@ core/
     base.py              # StatusProvider ABC
     statuspage.py        # Atlassian Statuspage adapter
 ui/
-  canvas.py              # Core rendering surface (PIL 1-bit wrapper)
+  canvas.py              # Core rendering surface (PIL 1-bit wrapper, 250x122 landscape)
   layout.py              # Layout primitives (header, item_row, footer, etc.)
+  formatters.py          # Value formatters: cost (ceil), duration, tokens (K/M)
   fonts.py               # Font loading (PIL default bitmap, TTF-ready)
   assets/__init__.py     # Pixel art icons (anthropic, openai, lotus, generic) + sprite loader
-  templates/             # Template registry + 11 screen templates
+  layouts/               # Layout registry + 12 screen layouts (landscape)
     boot.py              # Boot/splash screen
     setup.py             # WiFi setup instructions
     status_dashboard.py  # Generic status dashboard (preview)
-    status_board.py      # Live status board rendering (used by core/screens/status_board.py)
-    tamagotchi.py        # Live tamagotchi rendering (used by core/screens/tamagotchi.py)
-    agent_feed.py        # Live agent feed rendering (used by core/screens/agent_feed.py)
-    device_status.py     # Device vitals rendering (used by core/screens/device_status.py)
+    status_board.py      # Live status board rendering (horizontal compact)
+    tamagotchi.py        # Live tamagotchi rendering (profile-card split panel)
+    agent_feed.py        # Live agent feed rendering (horizontal rows)
+    device_status.py     # Device vitals rendering (OS monitor with mini bars)
+    opencode.py          # OpenCode dedicated detail (split panel)
     detail.py            # Single service detail view
     message.py           # Alert/notification screen
     idle.py              # Idle/mascot screen
     error.py             # Error/offline screen
   image_tools/           # Image preparation pipeline + dithering
-  preview/               # Template preview renderer + contact sheet
+  preview/               # Layout preview renderer + contact sheet
 commands/
   init.py                # Interactive setup wizard
 app.py                   # CLI entrypoint (init, run, once, preview, demo, doctor, ui-preview)
@@ -231,8 +270,9 @@ Testing without PiSugar hardware: `kill -USR1 $(cat /tmp/tamagotchai.pid)` works
 
 ### Display Dimensions
 
-- Waveshare 2.13" V1-V4 e-paper: **122 x 250 pixels** (portrait, no rotation)
-- Waveshare 2.13" BC/D: **104 x 212 pixels**
+- All layouts render in **landscape** orientation: **250 x 122 pixels** (logical)
+- Physical Waveshare 2.13" panels are 122x250 portrait; the backend rotates by 90 degrees before sending to the driver
+- Waveshare 2.13" BC/D physical: 104x212 (logical landscape: 212x104)
 - Images are created in PIL mode `'1'` (1-bit black/white)
 - `fill=255` for white, `fill=0` for black
 
@@ -312,6 +352,18 @@ Any AI agent can feed its live status into the display by serving this JSON at a
 ### Default shipped screen
 
 Tamagotchai ships with `agent_feed` as its default screen, polling `http://127.0.0.1:7788/status` for an OpenCode agent. If the agent is offline, the display shows setup instructions instead of a cryptic error -- telling the user exactly how to install the plugin and start the agent.
+
+### Value Formatting
+
+The `ui/formatters.py` module provides automatic formatting for common metrics. The `opencode` and `tamagotchi` screens apply formatting based on `info_lines` label names:
+
+| Label hint | Formatter | Example |
+|---|---|---|
+| `cost` | `fmt_cost()` — ceiling round, max 2 decimals | `0.0041` -> `$0.01` |
+| `duration`, `time`, `elapsed` | `fmt_duration()` — ms to human readable | `245000` -> `4m 5s` |
+| `token`, `tok` | `fmt_tokens()` — compact K/M suffix | `102900` -> `102.9K` |
+
+Labels that don't match a hint pass through as-is.
 
 ### Agent Status JSON fields
 

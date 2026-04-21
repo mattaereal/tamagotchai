@@ -1,0 +1,15 @@
+# Default status board preset.
+# Use in screens.yml:
+#   - name: Services
+#     template: default-status-board
+#     categories:
+#       - name: Claude
+#         url: https://status.claude.com/api/v2/summary.json
+#         type: statuspage
+#         items:
+#           - key: claude.ai
+#             label: AI
+
+type: status_board
+poll_interval: 30
+display_duration: 30

@@ -46,14 +46,15 @@ class MockPNGDisplay(DisplayBackend):
     """Renders status to a local PNG file (useful for testing on laptops)."""
 
     def __init__(self, config: Union[DisplayConfig, Dict[str, Any]]):
-        self._width = _get_display_value(config, "width", 122)
-        self._height = _get_display_value(config, "height", 250)
+        self._width = _get_display_value(config, "width", 250)
+        self._height = _get_display_value(config, "height", 122)
+        self._rotation = _get_display_value(config, "rotation", 0)
         self._img: Image.Image = Image.new("1", (self._width, self._height), 255)
         self._draw = ImageDraw.Draw(self._img)
         self._out_dir = "out"
         os.makedirs(self._out_dir, exist_ok=True)
         logger.info(
-            f"MockPNGDisplay initialized (portrait {self._width}x{self._height})"
+            f"MockPNGDisplay initialized (landscape {self._width}x{self._height})"
         )
 
     @property

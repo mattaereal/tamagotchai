@@ -223,8 +223,8 @@ def test_sprite_config():
 
 
 def test_screen_config():
-    sc = ScreenConfig(name="AI Health", template="status_board")
-    assert sc.template == "status_board"
+    sc = ScreenConfig(name="AI Health", type="status_board")
+    assert sc.type == "status_board"
     assert sc.url == ""
 
 
@@ -235,7 +235,7 @@ def test_config_from_dict():
         "screens": [
             {
                 "name": "AI Health",
-                "template": "status_board",
+                "type": "status_board",
                 "categories": [
                     {
                         "name": "Claude",
@@ -248,7 +248,7 @@ def test_config_from_dict():
             },
             {
                 "name": "Lotus",
-                "template": "tamagotchi",
+                "type": "tamagotchi",
                 "url": "http://test/health",
                 "sprites": {
                     "idle": "img/irk_1.png",
@@ -277,11 +277,11 @@ def test_config_from_dict():
     assert len(cfg.screens) == 2
 
     s0 = cfg.screens[0]
-    assert s0.template == "status_board"
+    assert s0.type == "status_board"
     assert s0.categories[0].items[0].label == "AI"
 
     s1 = cfg.screens[1]
-    assert s1.template == "tamagotchi"
+    assert s1.type == "tamagotchi"
     assert s1.sprites.idle == "img/irk_1.png"
     assert s1.mood_map.key == "status"
     assert s1.info_lines[1].keys == ["prs_created", "prs_merged"]
@@ -294,7 +294,7 @@ def test_config_info_line_backward_compat():
         "screens": [
             {
                 "name": "Test",
-                "template": "tamagotchi",
+                "type": "tamagotchi",
                 "url": "http://test",
                 "info_lines": [
                     {"label": "status", "field": "status"},
@@ -324,7 +324,7 @@ def test_load_config_yaml():
             f.write(
                 "screens:\n"
                 "  - name: Test\n"
-                "    template: status_board\n"
+                "    type: status_board\n"
                 "    categories:\n"
                 "      - name: Foo\n"
                 "        url: http://test\n"
@@ -355,8 +355,8 @@ def test_load_config_partial():
             f.write("backend: waveshare_2in13_v3\n")
         cfg = load_config(td)
         assert cfg.display.backend == "waveshare_2in13_v3"
-        assert cfg.display.width == 122
-        assert cfg.display.height == 250
+        assert cfg.display.width == 250
+        assert cfg.display.height == 122
         assert len(cfg.screens) == 0
 
 
@@ -364,27 +364,27 @@ def test_load_config_partial():
 
 
 def test_status_board_render_empty():
-    sc = ScreenConfig(name="Test", template="status_board")
+    sc = ScreenConfig(name="Test", type="status_board")
     screen = StatusBoardScreen(sc)
-    img = screen.render(122, 250)
-    assert img.size == (122, 250)
+    img = screen.render(250, 122)
+    assert img.size == (250, 122)
 
 
 def test_status_board_has_changed_initial():
-    sc = ScreenConfig(name="Test", template="status_board")
+    sc = ScreenConfig(name="Test", type="status_board")
     screen = StatusBoardScreen(sc)
     assert screen.has_changed() is True
 
 
 def test_status_board_has_changed_after_render():
-    sc = ScreenConfig(name="Test", template="status_board")
+    sc = ScreenConfig(name="Test", type="status_board")
     screen = StatusBoardScreen(sc)
-    screen.render(122, 250)
+    screen.render(250, 122)
     assert screen.has_changed() is False
 
 
 def test_status_board_render_with_data():
-    sc = ScreenConfig(name="AI Health", template="status_board")
+    sc = ScreenConfig(name="AI Health", type="status_board")
     screen = StatusBoardScreen(sc)
     screen._categories = [
         CategoryData(
@@ -393,16 +393,16 @@ def test_status_board_render_with_data():
         CategoryData("OpenAI", "openai", {"App": ServiceStatus.DEGRADED}),
     ]
     screen._last_refresh = None
-    img = screen.render(122, 250)
-    assert img.size == (122, 250)
+    img = screen.render(250, 122)
+    assert img.size == (250, 122)
 
 
 def test_status_board_data_change():
-    sc = ScreenConfig(name="Test", template="status_board")
+    sc = ScreenConfig(name="Test", type="status_board")
     screen = StatusBoardScreen(sc)
     screen._categories = [CategoryData("Test", "generic", {"Foo": ServiceStatus.OK})]
     screen._last_refresh = None
-    screen.render(122, 250)
+    screen.render(250, 122)
     assert screen.has_changed() is False
     screen._categories[0].items["Foo"] = ServiceStatus.DOWN
     assert screen.has_changed() is True
@@ -412,29 +412,29 @@ def test_status_board_data_change():
 
 
 def test_tamagotchi_render_empty():
-    sc = ScreenConfig(name="Test", template="tamagotchi", url="http://test")
+    sc = ScreenConfig(name="Test", type="tamagotchi", url="http://test")
     screen = TamagotchiScreen(sc)
-    img = screen.render(122, 250)
-    assert img.size == (122, 250)
+    img = screen.render(250, 122)
+    assert img.size == (250, 122)
 
 
 def test_tamagotchi_has_changed_initial():
-    sc = ScreenConfig(name="Test", template="tamagotchi", url="http://test")
+    sc = ScreenConfig(name="Test", type="tamagotchi", url="http://test")
     screen = TamagotchiScreen(sc)
     assert screen.has_changed() is True
 
 
 def test_tamagotchi_has_changed_after_render():
-    sc = ScreenConfig(name="Test", template="tamagotchi", url="http://test")
+    sc = ScreenConfig(name="Test", type="tamagotchi", url="http://test")
     screen = TamagotchiScreen(sc)
-    screen.render(122, 250)
+    screen.render(250, 122)
     assert screen.has_changed() is False
 
 
 def test_tamagotchi_mood_resolve():
     sc = ScreenConfig(
         name="Test",
-        template="tamagotchi",
+        type="tamagotchi",
         url="http://test",
         mood_map=MoodMapConfig(
             key="status", ok="idle", ok_busy="working", error="error"
@@ -458,7 +458,7 @@ def test_tamagotchi_mood_resolve():
 def test_tamagotchi_mood_resolve_nested_key():
     sc = ScreenConfig(
         name="Test",
-        template="tamagotchi",
+        type="tamagotchi",
         url="http://test",
         mood_map=MoodMapConfig(
             key="health.status", ok="idle", ok_busy="working", error="error"
@@ -473,7 +473,7 @@ def test_tamagotchi_mood_resolve_nested_key():
 def test_tamagotchi_info_line_simple_key():
     sc = ScreenConfig(
         name="Test",
-        template="tamagotchi",
+        type="tamagotchi",
         url="http://test",
         info_lines=[InfoLineConfig(label="status", key="status")],
     )
@@ -486,7 +486,7 @@ def test_tamagotchi_info_line_simple_key():
 def test_tamagotchi_info_line_nested_key():
     sc = ScreenConfig(
         name="Test",
-        template="tamagotchi",
+        type="tamagotchi",
         url="http://test",
         info_lines=[InfoLineConfig(label="health", key="data.health")],
     )
@@ -499,7 +499,7 @@ def test_tamagotchi_info_line_nested_key():
 def test_tamagotchi_info_line_template_positional():
     sc = ScreenConfig(
         name="Test",
-        template="tamagotchi",
+        type="tamagotchi",
         url="http://test",
         info_lines=[
             InfoLineConfig(
@@ -516,7 +516,7 @@ def test_tamagotchi_info_line_template_positional():
 def test_tamagotchi_info_line_template_nested_keys():
     sc = ScreenConfig(
         name="Test",
-        template="tamagotchi",
+        type="tamagotchi",
         url="http://test",
         info_lines=[
             InfoLineConfig(label="PRs", template="+{0}", keys=["activity.prs_created"])
@@ -529,11 +529,11 @@ def test_tamagotchi_info_line_template_nested_keys():
 
 
 def test_tamagotchi_data_change():
-    sc = ScreenConfig(name="Test", template="tamagotchi", url="http://test")
+    sc = ScreenConfig(name="Test", type="tamagotchi", url="http://test")
     screen = TamagotchiScreen(sc)
     screen._data = {"status": "ok"}
     screen._resolve_mood()
-    screen.render(122, 250)
+    screen.render(250, 122)
     assert screen.has_changed() is False
     screen._data = {"status": "down"}
     screen._resolve_mood()
@@ -543,7 +543,7 @@ def test_tamagotchi_data_change():
 def test_tamagotchi_with_sprites():
     sc = ScreenConfig(
         name="Test",
-        template="tamagotchi",
+        type="tamagotchi",
         url="http://test",
         sprites=SpriteConfig(
             idle="img/irk_1.png",
@@ -554,8 +554,8 @@ def test_tamagotchi_with_sprites():
     )
     screen = TamagotchiScreen(sc)
     assert len(screen._sprites) == 4
-    img = screen.render(122, 250)
-    assert img.size == (122, 250)
+    img = screen.render(250, 122)
+    assert img.size == (250, 122)
 
 
 # --- create_screens factory ---
@@ -572,8 +572,8 @@ def test_create_screens_from_config():
     cfg = AppConfig(
         display=DisplayConfig("mock"),
         screens=[
-            ScreenConfig(name="AI Health", template="status_board"),
-            ScreenConfig(name="Lotus", template="tamagotchi", url="http://test"),
+            ScreenConfig(name="AI Health", type="status_board"),
+            ScreenConfig(name="Lotus", type="tamagotchi", url="http://test"),
         ],
     )
     screens = create_screens(cfg)
@@ -586,25 +586,25 @@ def test_create_screens_from_config():
 
 
 def test_mock_status_board_injection():
-    sc = ScreenConfig(name="AI Health", template="status_board")
+    sc = ScreenConfig(name="AI Health", type="status_board")
     screen = StatusBoardScreen(sc)
     from app import _inject_mock_status_board
 
     _inject_mock_status_board(screen)
     assert len(screen._categories) == 3
-    img = screen.render(122, 250)
-    assert img.size == (122, 250)
+    img = screen.render(250, 122)
+    assert img.size == (250, 122)
 
 
 def test_mock_tamagotchi_injection():
-    sc = ScreenConfig(name="Lotus", template="tamagotchi", url="http://test")
+    sc = ScreenConfig(name="Lotus", type="tamagotchi", url="http://test")
     screen = TamagotchiScreen(sc)
     from app import _inject_mock_tamagotchi
 
     _inject_mock_tamagotchi(screen)
     assert screen._data.get("status") == "ok"
-    img = screen.render(122, 250)
-    assert img.size == (122, 250)
+    img = screen.render(250, 122)
+    assert img.size == (250, 122)
 
 
 # --- MoodMapConfig with map ---
@@ -632,7 +632,7 @@ def test_mood_map_with_explicit_map():
 def test_mood_map_explicit_takes_precedence():
     sc = ScreenConfig(
         name="Test",
-        template="tamagotchi",
+        type="tamagotchi",
         url="http://test",
         mood_map=MoodMapConfig(
             key="status",
@@ -661,7 +661,7 @@ def test_mood_map_explicit_takes_precedence():
 def test_mood_map_without_map_legacy_behavior():
     sc = ScreenConfig(
         name="Test",
-        template="tamagotchi",
+        type="tamagotchi",
         url="http://test",
         mood_map=MoodMapConfig(
             key="status",
@@ -688,7 +688,7 @@ def test_mood_map_without_map_legacy_behavior():
 def test_mood_map_fallback():
     sc = ScreenConfig(
         name="Test",
-        template="tamagotchi",
+        type="tamagotchi",
         url="http://test",
         mood_map=MoodMapConfig(
             key="status",
@@ -711,7 +711,7 @@ def test_stale_heartbeat_sets_offline():
 
     sc = ScreenConfig(
         name="Test",
-        template="tamagotchi",
+        type="tamagotchi",
         url="http://test",
         stale_threshold=60,
         mood_map=MoodMapConfig(
@@ -744,7 +744,7 @@ def test_fresh_heartbeat_unchanged():
 
     sc = ScreenConfig(
         name="Test",
-        template="tamagotchi",
+        type="tamagotchi",
         url="http://test",
         stale_threshold=120,
         mood_map=MoodMapConfig(
@@ -787,7 +787,7 @@ def test_agent_feed_config_parsing():
         "screens": [
             {
                 "name": "All Agents",
-                "template": "agent_feed",
+                "type": "agent_feed",
                 "poll_interval": 5,
                 "agents": [
                     {"name": "OpenCode", "url": "http://localhost:7788/status"},
@@ -798,7 +798,7 @@ def test_agent_feed_config_parsing():
     }
     cfg = AppConfig.from_dict(data)
     assert len(cfg.screens) == 1
-    assert cfg.screens[0].template == "agent_feed"
+    assert cfg.screens[0].type == "agent_feed"
     assert len(cfg.screens[0].agents) == 2
     assert cfg.screens[0].agents[0].name == "OpenCode"
 
@@ -808,7 +808,7 @@ def test_agent_feed_screen_render():
 
     sc = ScreenConfig(
         name="All Agents",
-        template="agent_feed",
+        type="agent_feed",
         agents=[
             AgentFeedEntry(name="OpenCode", url="http://localhost:7788/status"),
             AgentFeedEntry(name="Cursor", url="http://localhost:7789/status"),
@@ -824,8 +824,8 @@ def test_agent_feed_screen_render():
         },
         {"name": "Cursor", "status": "idle"},
     ]
-    img = screen.render(122, 250)
-    assert img.size == (122, 250)
+    img = screen.render(250, 122)
+    assert img.size == (250, 122)
 
 
 def test_agent_feed_screen_has_changed():
@@ -833,17 +833,17 @@ def test_agent_feed_screen_has_changed():
 
     sc = ScreenConfig(
         name="All Agents",
-        template="agent_feed",
+        type="agent_feed",
         agents=[AgentFeedEntry(name="Test", url="http://test")],
     )
     screen = AgentFeedScreen(sc)
     assert screen.has_changed() is True
     screen._agents_data = [{"name": "Test", "status": "idle"}]
-    screen.render(122, 250)
+    screen.render(250, 122)
     assert screen.has_changed() is False
     screen._agents_data = [{"name": "Test", "status": "working"}]
     assert screen.has_changed() is True
-    screen.render(122, 250)
+    screen.render(250, 122)
     screen._agents_data = [
         {"name": "Test", "status": "working", "metadata": {"cost_usd": 0.01}}
     ]
@@ -856,7 +856,7 @@ def test_create_screens_agent_feed():
         screens=[
             ScreenConfig(
                 name="All Agents",
-                template="agent_feed",
+                type="agent_feed",
                 agents=[AgentFeedEntry(name="Test", url="http://test")],
             ),
         ],
@@ -874,7 +874,7 @@ def test_create_screens_opencode():
         screens=[
             ScreenConfig(
                 name="OpenCode",
-                template="opencode",
+                type="opencode",
                 url="http://localhost:7788/status",
             ),
         ],
@@ -889,7 +889,7 @@ def test_create_screens_opencode():
 def test_opencode_screen_render():
     from core.screens.opencode import OpenCodeScreen
 
-    sc = ScreenConfig(name="OpenCode", template="opencode", url="http://test")
+    sc = ScreenConfig(name="OpenCode", type="opencode", url="http://test")
     screen = OpenCodeScreen(sc)
     screen._data = {
         "status": "working",
@@ -902,29 +902,29 @@ def test_opencode_screen_render():
             "message_count": 5,
         },
     }
-    img = screen.render(122, 250)
-    assert img.size == (122, 250)
+    img = screen.render(250, 122)
+    assert img.size == (250, 122)
     assert img.mode == "1"
 
 
 def test_opencode_screen_fetch_error():
     from core.screens.opencode import OpenCodeScreen
 
-    sc = ScreenConfig(name="OpenCode", template="opencode", url="http://test")
+    sc = ScreenConfig(name="OpenCode", type="opencode", url="http://test")
     screen = OpenCodeScreen(sc)
     screen._data = {"__fetch_error": True}
-    img = screen.render(122, 250)
-    assert img.size == (122, 250)
+    img = screen.render(250, 122)
+    assert img.size == (250, 122)
 
 
 def test_opencode_screen_has_changed():
     from core.screens.opencode import OpenCodeScreen
 
-    sc = ScreenConfig(name="OpenCode", template="opencode", url="http://test")
+    sc = ScreenConfig(name="OpenCode", type="opencode", url="http://test")
     screen = OpenCodeScreen(sc)
     assert screen.has_changed() is True
     screen._data = {"status": "idle"}
-    screen.render(122, 250)
+    screen.render(250, 122)
     assert screen.has_changed() is False
     screen._data = {"status": "working"}
     assert screen.has_changed() is True
@@ -933,7 +933,7 @@ def test_opencode_screen_has_changed():
 def test_device_status_screen_render():
     from core.screens.device_status import DeviceStatusScreen
 
-    sc = ScreenConfig(name="Device", template="device_status")
+    sc = ScreenConfig(name="Device", type="device_status")
     screen = DeviceStatusScreen(sc)
     screen._data = {
         "hostname": "test.local",
@@ -951,19 +951,19 @@ def test_device_status_screen_render():
         "pid": "99999",
         "version": "1.0.0",
     }
-    img = screen.render(122, 250)
-    assert img.size == (122, 250)
+    img = screen.render(250, 122)
+    assert img.size == (250, 122)
     assert img.mode == "1"
 
 
 def test_device_status_screen_has_changed():
     from core.screens.device_status import DeviceStatusScreen
 
-    sc = ScreenConfig(name="Device", template="device_status")
+    sc = ScreenConfig(name="Device", type="device_status")
     screen = DeviceStatusScreen(sc)
     assert screen.has_changed() is True
     screen._data = {"hostname": "test", "ip": "1.2.3.4"}
-    screen.render(122, 250)
+    screen.render(250, 122)
     assert screen.has_changed() is False
     screen._data = {"hostname": "test", "ip": "5.6.7.8"}
     assert screen.has_changed() is True
@@ -972,13 +972,13 @@ def test_device_status_screen_has_changed():
 def test_device_status_screen_defaults():
     from core.screens.device_status import DeviceStatusScreen
 
-    sc = ScreenConfig(name="Device", template="device_status")
+    sc = ScreenConfig(name="Device", type="device_status")
     screen = DeviceStatusScreen(sc)
     assert screen.poll_interval == 30
     assert screen.display_duration == 30
     screen._data = {}
-    img = screen.render(122, 250)
-    assert img.size == (122, 250)
+    img = screen.render(250, 122)
+    assert img.size == (250, 122)
 
 
 def test_device_status_helpers():
@@ -1012,7 +1012,7 @@ def test_create_screens_device_status():
     cfg = AppConfig(
         display=DisplayConfig("mock"),
         screens=[
-            ScreenConfig(name="Device", template="device_status"),
+            ScreenConfig(name="Device", type="device_status"),
         ],
     )
     screens = create_screens(cfg)

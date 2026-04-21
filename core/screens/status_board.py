@@ -1,4 +1,4 @@
-"""Generic status board screen (template: status_board).
+"""Generic status board screen (type: status_board).
 
 Displays categories with items, each showing a status icon.
 Supports two category types:
@@ -161,7 +161,7 @@ class StatusBoardScreen(Screen):
         self._last_refresh = datetime.now(timezone.utc)
 
     def render(self, width: int, height: int) -> Image.Image:
-        from ui.templates import render as tpl_render
+        from ui.layouts import render as tpl_render
         from ui.canvas import Canvas
         from ui.assets import resolve_icon_key
 

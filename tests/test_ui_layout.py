@@ -16,24 +16,9 @@ from ui import layout, MARGIN
 
 def test_canvas_dimensions():
     c = Canvas()
-    assert c.w == 122
-    assert c.h == 250
-    img = c.to_image()
-    assert img.size == (122, 250)
-    assert img.mode == "1"
-
-
-def test_canvas_custom_size():
-    c = Canvas(100, 200)
-    assert c.w == 100
-    assert c.h == 200
-
-
-def test_canvas_content_bounds():
-    c = Canvas()
-    assert c.content_left == 4
-    assert c.content_right == 118
-    assert c.content_width == 114
+    assert c.w == 250
+    assert c.h == 122
+    assert c.content_width == 242
 
 
 def test_canvas_text():

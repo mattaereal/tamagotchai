@@ -1,0 +1,47 @@
+# Default OpenCode agent detail preset.
+# Use in screens.yml:
+#   - name: OpenCode
+#     template: default-opencode
+#     url: http://your-agent:7788/status
+#
+# Override any key below in your screen definition.
+
+type: opencode
+poll_interval: 5
+display_duration: 15
+stale_threshold: 120
+url: http://127.0.0.1:7788/status
+info_lines:
+  - label: model
+    key: metadata.model
+    max_length: 18
+  - label: tok
+    template: "{0} in / {1} out"
+    keys: [metadata.tokens_input, metadata.tokens_output]
+    max_length: 20
+  - label: cost
+    template: "${0}"
+    keys: [metadata.cost_usd]
+    max_length: 12
+  - label: tool
+    key: metadata.tool_name
+    max_length: 16
+  - label: files
+    key: metadata.files_modified
+    max_length: 12
+  - label: msgs
+    key: metadata.message_count
+    max_length: 12
+  - label: duration
+    key: metadata.session_duration_ms
+    max_length: 14
+  - label: diff
+    template: "+{0} / -{1}"
+    keys: [metadata.lines_added, metadata.lines_removed]
+    max_length: 16
+  - label: commits
+    key: metadata.commits
+    max_length: 10
+  - label: project
+    key: metadata.project
+    max_length: 14

@@ -11,7 +11,7 @@ from typing import Optional
 from PIL import Image
 
 from ..canvas import Canvas
-from .. import templates
+from .. import layouts as _layouts
 
 
 MOCK_DATA = {
@@ -173,7 +173,7 @@ def render_template(
     name: str, data: dict | None = None, output_dir: str = "out/screens"
 ) -> str:
     d = data or MOCK_DATA.get(name, {})
-    img = templates.render(name, d)
+    img = _layouts.render(name, d)
     os.makedirs(output_dir, exist_ok=True)
     path = os.path.join(output_dir, f"{name}.png")
     img.save(path, format="PNG")
@@ -182,7 +182,7 @@ def render_template(
 
 def render_all(output_dir: str = "out/screens") -> list[str]:
     paths = []
-    for name in templates.names():
+    for name in _layouts.names():
         path = render_template(name, output_dir=output_dir)
         paths.append(path)
     return paths

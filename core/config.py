@@ -25,54 +25,63 @@ SCREENS_CONFIG_FILE = "screens.yml"
 
 DISPLAY_PROFILES = {
     "mock": {
-        "width": 122,
-        "height": 250,
-        "description": "Mock PNG output (development)",
+        "width": 250,
+        "height": 122,
+        "description": "Mock PNG output (development, landscape)",
     },
     "waveshare_2in13_v1": {
-        "width": 122,
-        "height": 250,
-        "description": 'Waveshare 2.13" V1 (B/W, 122x250)',
+        "width": 250,
+        "height": 122,
+        "rotation": 90,
+        "description": 'Waveshare 2.13" V1 (B/W, landscape 250x122)',
     },
     "waveshare_2in13_v2": {
-        "width": 122,
-        "height": 250,
-        "description": 'Waveshare 2.13" V2 (B/W, 122x250)',
+        "width": 250,
+        "height": 122,
+        "rotation": 90,
+        "description": 'Waveshare 2.13" V2 (B/W, landscape 250x122)',
     },
     "waveshare_2in13_v3": {
-        "width": 122,
-        "height": 250,
-        "description": 'Waveshare 2.13" V3 (B/W, 122x250)',
+        "width": 250,
+        "height": 122,
+        "rotation": 90,
+        "description": 'Waveshare 2.13" V3 (B/W, landscape 250x122)',
     },
     "waveshare_2in13_v4": {
-        "width": 122,
-        "height": 250,
-        "description": 'Waveshare 2.13" V4 (B/W, 122x250)',
+        "width": 250,
+        "height": 122,
+        "rotation": 90,
+        "description": 'Waveshare 2.13" V4 (B/W, landscape 250x122, fast refresh)',
     },
     "waveshare_2in13bc": {
-        "width": 104,
-        "height": 212,
-        "description": 'Waveshare 2.13" BC (B/W/R, 104x212, no partial)',
+        "width": 212,
+        "height": 104,
+        "rotation": 90,
+        "description": 'Waveshare 2.13" BC (B/W/R, landscape 212x104, no partial)',
     },
     "waveshare_2in13b_v3": {
-        "width": 122,
-        "height": 250,
-        "description": 'Waveshare 2.13" B V3 (B/W/R, 122x250, no partial)',
+        "width": 250,
+        "height": 122,
+        "rotation": 90,
+        "description": 'Waveshare 2.13" B V3 (B/W/R, landscape 250x122, no partial)',
     },
     "waveshare_2in13b_v4": {
-        "width": 122,
-        "height": 250,
-        "description": 'Waveshare 2.13" B V4 (B/W/R, 122x250, no partial)',
+        "width": 250,
+        "height": 122,
+        "rotation": 90,
+        "description": 'Waveshare 2.13" B V4 (B/W/R, landscape 250x122, no partial)',
     },
     "waveshare_2in13d": {
-        "width": 104,
-        "height": 212,
-        "description": 'Waveshare 2.13" D (B/W, 104x212, flexible)',
+        "width": 212,
+        "height": 104,
+        "rotation": 90,
+        "description": 'Waveshare 2.13" D (B/W, landscape 212x104, flexible)',
     },
     "waveshare_2in13g": {
-        "width": 122,
-        "height": 250,
-        "description": 'Waveshare 2.13" G (4-color, 122x250, no partial)',
+        "width": 250,
+        "height": 122,
+        "rotation": 90,
+        "description": 'Waveshare 2.13" G (4-color, landscape 250x122, no partial)',
     },
 }
 
@@ -102,6 +111,24 @@ def _load_yaml(path: str) -> Dict[str, Any]:
         raw = yaml.safe_load(f)
     if not isinstance(raw, dict):
         raise ValueError(f"Config file {path} root must be a mapping (dictionary)")
+    return raw
+
+
+def _load_template_preset(template_name: str, config_dir: str) -> Dict[str, Any]:
+    """Load a YAML template preset from the templates/ directory.
+
+    Template presets are sibling to the config directory:
+      <project_root>/
+        config/
+        templates/
+    """
+    templates_dir = os.path.join(os.path.dirname(config_dir) or ".", "templates")
+    path = os.path.join(templates_dir, f"{template_name}.yml")
+    if not os.path.exists(path):
+        raise ValueError(f"Template preset not found: {path}")
+    raw = _load_yaml(path)
+    if not isinstance(raw, dict):
+        raise ValueError(f"Template preset {path} root must be a mapping (dictionary)")
     return raw
 
 
@@ -175,7 +202,7 @@ class AgentFeedEntry:
 @dataclass
 class ScreenConfig:
     name: str
-    template: str
+    type: str
     poll_interval: int = 30
     display_duration: int = 30
     stale_threshold: int = 120
@@ -185,6 +212,8 @@ class ScreenConfig:
     mood_map: Optional[MoodMapConfig] = None
     info_lines: List[InfoLineConfig] = dataclass_field(default_factory=list)
     agents: List[AgentFeedEntry] = dataclass_field(default_factory=list)
+    layout: Optional[str] = None
+    template: Optional[str] = None
 
 
 @dataclass
@@ -205,11 +234,13 @@ class AppConfig:
         if backend in DISPLAY_PROFILES and "width" not in display_raw:
             display_raw.setdefault("width", DISPLAY_PROFILES[backend]["width"])
             display_raw.setdefault("height", DISPLAY_PROFILES[backend]["height"])
+            if "rotation" in DISPLAY_PROFILES[backend] and "rotation" not in display_raw:
+                display_raw.setdefault("rotation", DISPLAY_PROFILES[backend]["rotation"])
 
         display = DisplayConfig(
             backend=backend,
-            width=display_raw.get("width", 122),
-            height=display_raw.get("height", 250),
+            width=display_raw.get("width", 250),
+            height=display_raw.get("height", 122),
             rotation=display_raw.get("rotation", 0),
             full_refresh_every_n_updates=display_raw.get(
                 "full_refresh_every_n_updates", 50
@@ -218,6 +249,14 @@ class AppConfig:
 
         screens: List[ScreenConfig] = []
         for s_raw in data.get("screens", []):
+            # Resolve preset template if specified
+            preset_name = s_raw.get("template")
+            if preset_name and isinstance(preset_name, str):
+                preset = _load_template_preset(preset_name, config_dir)
+                merged = dict(preset)
+                merged.update(s_raw)
+                s_raw = merged
+
             categories: List[StatusBoardCategory] = []
             for cat_raw in s_raw.get("categories", []):
                 items: List[StatusBoardItem] = []
@@ -292,7 +331,7 @@ class AppConfig:
             screens.append(
                 ScreenConfig(
                     name=s_raw.get("name", ""),
-                    template=s_raw.get("template", "status_board"),
+                    type=s_raw.get("type", "status_board"),
                     poll_interval=s_raw.get("poll_interval", 30),
                     display_duration=s_raw.get("display_duration", 30),
                     stale_threshold=s_raw.get("stale_threshold", 120),
@@ -302,6 +341,8 @@ class AppConfig:
                     mood_map=mood_map,
                     info_lines=info_lines,
                     agents=agents,
+                    layout=s_raw.get("layout"),
+                    template=s_raw.get("template"),
                 )
             )
 

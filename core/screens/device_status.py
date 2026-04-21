@@ -1,4 +1,4 @@
-"""Device status screen (template: device_status).
+"""Device status screen (type: device_status).
 
 Gathers local system vitals and renders them to the e-paper display.
 No HTTP fetch -- all data comes from local system calls.
@@ -255,7 +255,7 @@ class DeviceStatusScreen(Screen):
         }
 
     def render(self, width: int, height: int) -> Image.Image:
-        from ui.templates import render as tpl_render
+        from ui.layouts import render as tpl_render
 
         img = tpl_render("device_status", self._data, canvas=Canvas(width, height))
         self._last_hash = self._data_hash()

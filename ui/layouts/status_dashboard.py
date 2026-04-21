@@ -1,4 +1,4 @@
-"""Status dashboard screen template."""
+"""Status dashboard layout -- landscape."""
 
 from __future__ import annotations
 
@@ -18,11 +18,15 @@ def render(c: Canvas, data: dict) -> Image.Image:
     timestamp = data.get("timestamp", "")
     categories = data.get("categories", [])
 
-    y = layout.header(c, title, MARGIN, timestamp)
+    # Title bar
+    c.text((MARGIN, 3), title, fill=0)
+    if timestamp:
+        c.right_text(3, timestamp)
+    c.hline(14, fill=0)
 
+    y = 18
     for cat in categories:
-        if layout.is_overflow(y, c.h):
-            y = layout.overflow_marker(c, y)
+        if y + layout.LINE_H * 2 > c.h - layout.FOOTER_RESERVE:
             break
 
         cat_name = cat.get("name", "?")
@@ -32,14 +36,30 @@ def render(c: Canvas, data: dict) -> Image.Image:
         else:
             icon_key = resolve_icon_key(cat_name, icon_name or "generic")
         icon_img = get_icon(icon_key)
-        y = layout.category_row(c, cat_name, icon_img, y)
 
+        # Category header
+        if icon_img:
+            c.paste(icon_img, (MARGIN, y))
+            c.text((MARGIN + 16, y), cat_name[:10], fill=0)
+        else:
+            c.text((MARGIN, y), cat_name[:12], fill=0)
+        y += layout.LINE_H + 2
+
+        # Items as horizontal chips
+        x = MARGIN
+        chip_w = 40
         for item in cat.get("items", []):
-            if layout.is_overflow(y, c.h):
+            if x + chip_w > c.w - MARGIN:
                 break
             label = item.get("label", item.get("key", "?"))
             status = item.get("status", "UNKNOWN")
-            y = layout.item_row(c, label, status, y)
+            icon = {"OK": "[+]", "DEGRADED": "[!]", "DOWN": "[-]", "UNKNOWN": "[?]"}.get(status, "[?]")
+            chip = f"{label}{icon}"
+            if len(chip) > 9:
+                chip = label[:5] + ".." + icon
+            c.text((x, y), chip, fill=0)
+            x += chip_w
+        y += layout.LINE_H + 4
 
     status_text = "ok" if timestamp else "no data"
     stale = data.get("stale", False)

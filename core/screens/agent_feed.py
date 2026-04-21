@@ -1,4 +1,4 @@
-"""Agent feed screen (template: agent_feed).
+"""Agent feed screen (type: agent_feed).
 
 Shows multiple AI agents in a compact list on one screen.
 Each agent serves the standard Agent Status JSON schema over HTTP.
@@ -85,7 +85,7 @@ class AgentFeedScreen(Screen):
         self._agents_data = processed
 
     def render(self, width: int, height: int) -> Image.Image:
-        from ui.templates import render as tpl_render
+        from ui.layouts import render as tpl_render
         from ui.canvas import Canvas
 
         agents = []

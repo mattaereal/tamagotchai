@@ -7,7 +7,7 @@
 
 screens:
   - name: OpenCode
-    template: opencode
+    type: opencode
     poll_interval: 5
     display_duration: 15
     stale_threshold: 120
@@ -48,22 +48,22 @@ screens:
         key: metadata.project
         max_length: 14
 
-  # --- Optional: legacy templates below ---
+  # --- Optional: additional screens below ---
   #
   # - name: AI Health
-  #   template: status_board
-  #   poll_interval: 30
-  #   display_duration: 30
-  #   categories:
-  #     - name: Claude
-  #       url: https://status.claude.com/api/v2/summary.json
-  #       type: statuspage
-  #       icon: anthropic
-  #       items:
-  #         - key: claude.ai
-  #           label: AI
+  #     type: status_board
+  #     poll_interval: 30
+  #     display_duration: 30
+  #     categories:
+  #       - name: Claude
+  #         url: https://status.claude.com/api/v2/summary.json
+  #         type: statuspage
+  #         icon: anthropic
+  #         items:
+  #           - key: claude.ai
+  #             label: AI
   #
   # - name: Device
-  #   template: device_status
-  #   poll_interval: 30
-  #   display_duration: 15
+  #     type: device_status
+  #     poll_interval: 30
+  #     display_duration: 15

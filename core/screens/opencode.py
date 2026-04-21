@@ -1,4 +1,4 @@
-"""OpenCode detail screen (template: opencode).
+"""OpenCode detail screen (type: opencode).
 
 Dedicated single-agent screen. Users configure info_lines in
 screens.yml to choose which fields appear. All dot-notation keys
@@ -16,6 +16,7 @@ from PIL import Image
 
 from .base import Screen
 from ..config import ScreenConfig, resolve_key
+from ui.formatters import auto_format
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +53,7 @@ class OpenCodeScreen(Screen):
             self._data = {"__fetch_error": True}
 
     def render(self, width: int, height: int) -> Image.Image:
-        from ui.templates import render as tpl_render
+        from ui.layouts import render as tpl_render
         from ui.canvas import Canvas
 
         info_lines = []
@@ -79,13 +80,15 @@ class OpenCodeScreen(Screen):
     def _format_info_line(self, il) -> str:
         if il.template and il.keys:
             try:
-                vals = [str(resolve_key(self._data, k, "?")) for k in il.keys]
-                return il.template.format(*vals)
+                vals = [resolve_key(self._data, k, "?") for k in il.keys]
+                # Apply auto-format to each value based on label hint
+                formatted = [auto_format(il.label, v) for v in vals]
+                return il.template.format(*formatted)
             except (KeyError, IndexError):
                 return "?"
         if il.key:
             val = resolve_key(self._data, il.key, "")
-            return str(val)
+            return auto_format(il.label, val)
         return ""
 
     def has_changed(self) -> bool:

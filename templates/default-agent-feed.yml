@@ -1,0 +1,12 @@
+# Default agent feed preset.
+# Use in screens.yml:
+#   - name: Agents
+#     template: default-agent-feed
+#     agents:
+#       - name: OpenCode
+#         url: http://localhost:7788/status
+
+type: agent_feed
+poll_interval: 5
+display_duration: 30
+stale_threshold: 120
