@@ -95,6 +95,34 @@ def test_normalize_empty():
     assert len(result) == 0
 
 
+def test_normalize_overall_synthetic():
+    """Test that top-level page indicator is exposed as 'Overall'."""
+    provider = StatuspageProvider(display_name="Test", url="", component_keys=[])
+    raw = {
+        "status": {"indicator": "minor"},
+        "components": [
+            {"name": "API", "status": "operational"},
+        ],
+    }
+    result = provider.normalize(raw)
+    assert "Overall" in result
+    assert result["Overall"] == ServiceStatus.DEGRADED
+    assert "API" in result
+    assert result["API"] == ServiceStatus.OK
+
+
+def test_normalize_overall_only():
+    """Test that Overall is synthesized even when no components match."""
+    provider = StatuspageProvider(display_name="Test", url="", component_keys=["Overall"])
+    raw = {
+        "status": {"indicator": "major"},
+        "components": [],
+    }
+    result = provider.normalize(raw)
+    assert "Overall" in result
+    assert result["Overall"] == ServiceStatus.DOWN
+
+
 def test_display_name():
     provider = StatuspageProvider(display_name="My Service", url="", component_keys=[])
     assert provider.display_name() == "My Service"

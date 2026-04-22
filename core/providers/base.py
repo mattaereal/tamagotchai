@@ -124,11 +124,13 @@ class StatusProvider(ABC):
             "degraded performance",
             "partial_outage",
             "partial",
+            "minor",
         ):
             return ServiceStatus.DEGRADED
         if status_val in (
             "major_outage",
             "major",
+            "critical",
             "outage",
             "down",
             "offline",

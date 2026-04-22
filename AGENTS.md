@@ -363,9 +363,17 @@ Any AI agent can feed its live status into the display by serving this JSON at a
 
 **For OpenCode users:** Instead of building a custom endpoint, install `plugins/opencode-plugin-tamagotchai/` as an OpenCode plugin. It starts an HTTP server inside the OpenCode process and serves this exact JSON schema automatically, tracking sessions, tools, tokens, model, cost, files modified, and more from internal events. See the plugin README for setup.
 
-### Default shipped screen
+### Default shipped screens
 
-Tamagotchai ships with `agent_feed` as its default screen, polling `http://127.0.0.1:7788/status` for an OpenCode agent. If the agent is offline, the display shows setup instructions instead of a cryptic error -- telling the user exactly how to install the plugin and start the agent.
+The example config (`config/screens.yml.example`) ships with three screens:
+
+1. **OpenCode** (`type: opencode`) — detailed agent view polling `http://127.0.0.1:7788/status`
+2. **AI Services** (`type: status_board`) — minimalistic health for OpenAI, Anthropic, GitHub, and local OpenCode
+3. **Device** (`type: device_status`) — local system vitals (CPU, memory, disk, WiFi, battery)
+
+If the OpenCode agent is offline, the display shows setup instructions instead of a cryptic error -- telling the user exactly how to install the plugin and start the agent.
+
+The status board uses a compact inline layout for single-item categories: each service renders as one line (icon + name on the left, status chip on the right), fitting up to 6 services on the 250x122 panel.
 
 ### Value Formatting
 

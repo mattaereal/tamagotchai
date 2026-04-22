@@ -146,6 +146,7 @@ def test_icon_has_black_pixels():
 def test_resolve_icon_key():
     assert resolve_icon_key("Claude", "statuspage") == "anthropic"
     assert resolve_icon_key("OpenAI", "statuspage") == "openai"
+    assert resolve_icon_key("GitHub", "statuspage") == "github"
     assert resolve_icon_key("Lotus", "json") == "lotus"
     assert resolve_icon_key("Random", "statuspage") == "statuspage"
 

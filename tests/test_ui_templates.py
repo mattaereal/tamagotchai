@@ -261,6 +261,26 @@ def test_render_status_board_with_data():
     assert img.size == (250, 122)
 
 
+def test_render_status_board_compact():
+    """Compact mode: single-item categories render inline."""
+    from ui.layouts import render
+
+    img = render(
+        "status_board",
+        {
+            "name": "Services",
+            "categories": [
+                {"name": "OpenAI", "icon": "openai", "items": [{"label": "API", "status": "OK"}]},
+                {"name": "Anthropic", "icon": "anthropic", "items": [{"label": "AI", "status": "OK"}]},
+                {"name": "GitHub", "icon": "github", "items": [{"label": "GH", "status": "DEGRADED"}]},
+                {"name": "OpenCode", "icon": "generic", "items": [{"label": "Agent", "status": "OK"}]},
+            ],
+            "footer_text": "ok",
+        },
+    )
+    assert img.size == (250, 122)
+
+
 def test_render_tamagotchi():
     from ui.layouts import render
 

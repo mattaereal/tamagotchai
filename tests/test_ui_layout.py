@@ -212,6 +212,7 @@ def test_builtin_icons():
     names = builtin_icon_names()
     assert "anthropic" in names
     assert "openai" in names
+    assert "github" in names
     assert "lotus" in names
     assert "generic" in names
 
@@ -220,6 +221,15 @@ def test_get_icon_returns_image():
     from ui.assets import get_icon
 
     icon = get_icon("anthropic")
+    assert icon is not None
+    assert icon.size == (12, 12)
+    assert icon.mode == "1"
+
+
+def test_get_icon_github():
+    from ui.assets import get_icon
+
+    icon = get_icon("github")
     assert icon is not None
     assert icon.size == (12, 12)
     assert icon.mode == "1"
@@ -238,6 +248,7 @@ def test_resolve_icon_key():
 
     assert resolve_icon_key("Claude API") == "anthropic"
     assert resolve_icon_key("OpenAI GPT") == "openai"
+    assert resolve_icon_key("GitHub Status") == "github"
     assert resolve_icon_key("Lotus Health") == "lotus"
     assert resolve_icon_key("Custom Service") == "generic"
 

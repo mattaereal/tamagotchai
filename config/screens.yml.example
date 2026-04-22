@@ -1,11 +1,16 @@
 # Screen definitions for the e-paper display.
 # The scheduler cycles through each screen in order.
 #
-# Default: OpenCode dedicated detail screen.
-# Users can comment/uncomment info_lines to show/hide fields.
+# Default screens:
+#   1. OpenCode detail (local agent)
+#   2. AI Services status board (OpenAI, Anthropic, GitHub, local agent)
+#   3. Device vitals (CPU, memory, disk, WiFi, battery)
+#
+# Users can comment/uncomment info_lines to customize the OpenCode screen.
 # All keys use dot-notation (e.g. metadata.model).
 
 screens:
+  # --- Local agent detail ---
   - name: OpenCode
     type: opencode
     poll_interval: 5
@@ -45,22 +50,51 @@ screens:
         key: metadata.commits
         max_length: 10
 
-  # --- Optional: additional screens below ---
-  #
-  # - name: AI Health
-  #     type: status_board
-  #     poll_interval: 30
-  #     display_duration: 30
-  #     categories:
-  #       - name: Claude
-  #         url: https://status.claude.com/api/v2/summary.json
-  #         type: statuspage
-  #         icon: anthropic
-  #         items:
-  #           - key: claude.ai
-  #             label: AI
-  #
-  # - name: Device
-  #     type: device_status
-  #     poll_interval: 30
-  #     display_duration: 15
+  # --- AI service health ---
+  - name: AI Services
+    type: status_board
+    poll_interval: 60
+    display_duration: 15
+    categories:
+      - name: OpenAI
+        url: https://status.openai.com/api/v2/summary.json
+        type: statuspage
+        icon: openai
+        items:
+          - key: Overall
+            label: API
+      - name: Anthropic
+        url: https://status.claude.com/api/v2/summary.json
+        type: statuspage
+        icon: anthropic
+        items:
+          - key: Overall
+            label: AI
+      - name: GitHub
+        url: https://www.githubstatus.com/api/v2/summary.json
+        type: statuspage
+        icon: github
+        items:
+          - key: Overall
+            label: GH
+      # OpenRouter has no public JSON status endpoint yet
+      # - name: OpenRouter
+      #   url: YOUR_OPENROUTER_STATUS_URL
+      #   type: json
+      #   icon: generic
+      #   items:
+      #     - key: status
+      #       label: API
+      - name: OpenCode
+        url: http://127.0.0.1:7788/status
+        type: json
+        icon: generic
+        items:
+          - key: status
+            label: Agent
+
+  # --- Local device vitals ---
+  - name: Device
+    type: device_status
+    poll_interval: 30
+    display_duration: 15

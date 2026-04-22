@@ -96,6 +96,11 @@ class StatuspageProvider(StatusProvider):
                         st = str(val).lower()
                     result[key] = self._infer_status_from_value(st)
 
+        # Always inject a synthetic "Overall" component from the top-level
+        # page indicator so users can request a single aggregate status.
+        if overall != ServiceStatus.UNKNOWN:
+            result["Overall"] = overall
+
         # If we still have no components but the overall status is known,
         # synthesize a single synthetic component so the UI shows something.
         if not result and overall != ServiceStatus.UNKNOWN:

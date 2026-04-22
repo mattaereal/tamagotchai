@@ -6,9 +6,13 @@
 #       - name: Claude
 #         url: https://status.claude.com/api/v2/summary.json
 #         type: statuspage
+#         icon: anthropic
 #         items:
-#           - key: claude.ai
+#           - key: Overall
 #             label: AI
+#
+# The "Overall" key uses the top-level page indicator from Statuspage.
+# For single-service status, use exactly one item with key: Overall.
 
 type: status_board
 poll_interval: 30

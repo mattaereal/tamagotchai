@@ -193,6 +193,13 @@ def _ensure_icons() -> None:
     _BUILTIN_ICONS["openai"] = _make_openai_icon()
     _BUILTIN_ICONS["lotus"] = _make_lotus_icon()
     _BUILTIN_ICONS["generic"] = _make_generic_icon()
+    # Load GitHub icon from file if present
+    _github_path = os.path.join(os.path.dirname(__file__), "github_icon.png")
+    if os.path.exists(_github_path):
+        try:
+            _BUILTIN_ICONS["github"] = Image.open(_github_path).convert("1")
+        except Exception:
+            pass
 
 
 def get_icon(name: str) -> Optional[Image.Image]:
@@ -220,6 +227,8 @@ def resolve_icon_key(category_name: str, fallback: str = "generic") -> str:
         return "anthropic"
     if "openai" in name_lower or "gpt" in name_lower:
         return "openai"
+    if "github" in name_lower:
+        return "github"
     if "lotus" in name_lower:
         return "lotus"
     return fallback
