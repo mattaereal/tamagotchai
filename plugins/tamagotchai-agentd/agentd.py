@@ -1,10 +1,25 @@
 """tamagotchai-agentd: always-on status daemon for the e-paper display."""
 from __future__ import annotations
 
+# Self-bootstrap: register tamagotchai_agentd package for absolute imports
+import sys
+import importlib.util
+from pathlib import Path
+
+if "tamagotchai_agentd" not in sys.modules:
+    _pkg_dir = Path(__file__).parent
+    spec = importlib.util.spec_from_file_location(
+        "tamagotchai_agentd",
+        _pkg_dir / "__init__.py",
+        submodule_search_locations=[str(_pkg_dir)],
+    )
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["tamagotchai_agentd"] = mod
+    spec.loader.exec_module(mod)
+
 import logging
 import threading
 import time
-import sys
 from datetime import datetime, timezone
 from http.server import ThreadingHTTPServer
 

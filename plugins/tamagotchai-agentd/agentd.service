@@ -6,7 +6,6 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=%h
-Environment=PYTHONPATH=%h/tamagotchai/plugins
 Environment=TAMAGOTCHAI_BACKEND=file
 Environment=TAMAGOTCHAI_PORT=7788
 Environment=TAMAGOTCHAI_STALE_SECS=120
