@@ -1,0 +1,17 @@
+{
+  "name": "pi-tamagotchai",
+  "version": "0.1.0",
+  "description": "pi extension: writes session status JSON for the tamagotchai display daemon",
+  "main": "./src/index.ts",
+  "pi": {
+    "extensions": ["./src/index.ts"]
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^2.0.0",
+    "typescript": "^5.5.0",
+    "@types/node": "^20.0.0"
+  }
+}
