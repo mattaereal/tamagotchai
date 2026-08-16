@@ -14,3 +14,4 @@ config/*.yml
 
 # Local user files
 opencode.json
+.pi/

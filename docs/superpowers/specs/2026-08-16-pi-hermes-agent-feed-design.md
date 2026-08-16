@@ -62,12 +62,16 @@ Three components. The display stays pull-only. One daemon per agent host is the 
 │                                                                  │
 │  config/screens.yml (agent_feed):                                │
 │    agents:                                                       │
-│      - name: pi      url: http://127.0.0.1:7788/status/all       │
-│      - name: hermes1 url: https://hermes1.<tunnel>/status/all    │
-│      - name: hermes2 url: https://hermes2.<tunnel>/status/all    │
+│      - name: pi      url: http://127.0.0.1:7788/status           │
+│      - name: hermes1 url: https://hermes1.<tunnel>/status        │
+│      - name: hermes2 url: https://hermes2.<tunnel>/status        │
 │                                                                  │
 │  scheduler polls each URL every 5s (outbound GET only)           │
-│  agent_feed screen aggregates + renders to e-paper               │
+│  agent_feed = one row per URL. Each URL must return a SINGLE     │
+│  object (dict); agent_feed overwrites `name` from config.        │
+│  Use /status (not /status/all) for display. /status/all (array)  │
+│  kept for debugging/future. One row per host = one session shown │
+│  (latest active); multi-session-per-host visibility deferred.    │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -207,9 +211,9 @@ screens:
       - name: pi
         url: http://127.0.0.1:7788/status/all
       - name: hermes1
-        url: https://hermes1.<your-cf-tunnel>.com/status/all
+        url: https://hermes1.<your-cf-tunnel>.com/status
       - name: hermes2
-        url: https://hermes2.<your-cf-tunnel>.com/status/all
+        url: https://hermes2.<your-cf-tunnel>.com/status
 
   - name: AI Services
     type: status_board
@@ -252,19 +256,21 @@ screens:
 1. pi session event → extension handler builds payload dict.
 2. Handler atomically writes `~/.pi/agent/tamagotchai/sessions/<session-id>.json`.
 3. Daemon file backend polls the dir at 1s, reads the file, updates the in-memory registry.
-4. Display polls `http://127.0.0.1:7788/status/all` every 5s → receives array including the pi session.
-5. `agent_feed` layout renders one row per session.
+4. Display polls `http://127.0.0.1:7788/status` every 5s → receives single object including the pi session.
+5. `agent_feed` layout renders one row per configured URL.
 
 ### hermes path (hermes1, hermes2)
 1. hermes emits a hook event → outbound webhook POSTs to `http://127.0.0.1:7788/ingest` (localhost on the hermes box).
 2. Daemon webhook backend verifies HMAC-SHA256, translates payload, updates the registry.
 3. cloudflared exposes `https://hermesN.<tunnel>/status/all` publicly.
-4. Display polls that URL every 5s → array including the hermes session.
-5. Same `agent_feed` row.
+4. Display polls that URL every 5s → single object including the hermes session.
+5. Same `agent_feed` row (one row per configured URL).
 
 ### No-agent path (display still works)
-- Daemon up, no sessions registered → `/status/all` returns `[]`, `/status` returns the idle payload.
-- `agent_feed` renders an empty/no-agents state. Implementation must verify the existing layout handles an empty list gracefully; add a friendly empty row if it does not.
+- Daemon up, no sessions registered → `/status` returns the idle payload `{status:"idle", message:"no sessions", ...}`; `/status/all` returns `[]`.
+- `agent_feed` renders one row per configured URL. An idle host shows `[+] <name> idle`. Verified: `agent_feed.py` handles a non-dict JSON by wrapping it, and the layout maps `status:"idle"` → `[+]` (`ui/layouts/agent_feed.py:14`). No crash on idle payloads.
+- All-fetches-failed (every URL connection-refused) → `show_hint=True` → layout renders the "No agent data." hint block (`ui/layouts/agent_feed.py:120-132`). Already handled; no new code needed.
+- Empty `agents:` config list → `fetch()` returns early (`agent_feed.py:46-47`), renders `num_agents=0` with no rows. Doesn't crash.
 
 ## Error and stale handling
 
@@ -315,8 +321,8 @@ Display side is unchanged: `agent_feed` already has `__fetch_error` → `[-] con
 
 ## Open questions for implementation
 - Exact hermes webhook event names (verify against `agent/outbound_webhooks.py`'s registered event list at implementation time).
-- Whether `agent_feed` layout handles an empty agent list gracefully; add a friendly empty row if not.
 - Whether to also surface a `waiting_input` state for hermes (its `permission.asked` equivalent) — defer until hermes webhook event set is confirmed.
+- Multi-session-per-host visibility: current design shows one row per host (latest active session via `/status`). If multiple concurrent sessions per host must all be visible, that requires a display-side change to `agent_feed` (flatten array responses) — explicitly deferred.
 
 ## Out of scope (restated)
 - OpenCode plugin + OpenCode screen (untouched; dereferenced from default config).
