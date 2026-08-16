@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { appendFileSync } from "node:fs";
 
 import {
   AgentState,
@@ -10,6 +11,16 @@ import {
   deleteState,
   stateFilePath,
 } from "./state";
+
+const DEBUG = process.env.TAMAGOTCHAI_DEBUG === "1";
+function log(msg: string): void {
+  if (!DEBUG) return;
+  try {
+    appendFileSync(join(homedir(), ".local", "log", "pi-tamagotchai.log"), `${new Date().toISOString()} ${msg}\n`);
+  } catch {
+    // ignore
+  }
+}
 
 /**
  * Minimal pi ExtensionAPI surface used by this extension.
@@ -56,15 +67,19 @@ export default function (pi: ExtensionAPI): void {
 
   function withState(event: any, ctx: any): void {
     const sid = sessionId(ctx);
+    log(`event type=${event?.type} sid=${sid}`);
     if (!sid) return;
     const path = pathFor(sid);
     const prev = loadState(path);
-    if (!prev) return; // race: no session_start seen yet
-    atomicWrite(path, applyEvent(prev, event, ctx));
+    if (!prev) { log(`no prev state for ${sid}`); return; }
+    const next = applyEvent(prev, event, ctx);
+    atomicWrite(path, next);
+    log(`-> status=${next.status} msg=${next.message}`);
   }
 
   pi.on("session_start", (_event: any, ctx: any) => {
     const sid = sessionId(ctx);
+    log(`session_start sid=${sid}`);
     if (!sid) return;
     const project = ctx?.cwd?.split("/").pop() || "unknown";
     atomicWrite(pathFor(sid), defaultState(project));
@@ -84,8 +99,25 @@ export default function (pi: ExtensionAPI): void {
 
   pi.on("session_shutdown", (_event: any, ctx: any) => {
     const sid = sessionId(ctx);
+    log(`session_shutdown sid=${sid}`);
     if (!sid) return;
     deleteState(pathFor(sid));
     paths.delete(sid);
   });
+
+  // Periodic heartbeat: refresh last_heartbeat so daemon doesn't mark stale.
+  // Also flips stuck "working" -> "idle" (safety net if turn_end/agent_settled
+  // didn't fire). Fires every 30s per known session.
+  setInterval(() => {
+    for (const [sid, path] of paths) {
+      const prev = loadState(path);
+      if (!prev) continue;
+      // Only heartbeat if last update was >25s ago (avoid spamming during active work)
+      const ageMs = Date.now() - new Date(prev.last_heartbeat).getTime();
+      if (ageMs < 25000) continue;
+      const next = applyEvent(prev, { type: "heartbeat" }, {} as any);
+      atomicWrite(path, next);
+      log(`heartbeat sid=${sid} -> ${next.status}`);
+    }
+  }, 30000);
 }

@@ -71,8 +71,15 @@ export function applyEvent(state: AgentState, event: { type: string; [k: string]
     }
     case "turn_start":
       next.metadata.turn_count = (state.metadata.turn_count ?? 0) + 1;
+      next.status = "working";
+      next.message = "thinking";
+      next.pending = 1;
       break;
     case "turn_end":
+      // Turn done = waiting for user input
+      next.status = "idle";
+      next.message = "waiting";
+      next.pending = 0;
       break;
     case "message_end": {
       const u = extractUsage(event.message);
@@ -89,6 +96,12 @@ export function applyEvent(state: AgentState, event: { type: string; [k: string]
       next.status = "idle";
       next.message = "settled";
       next.pending = 0;
+      break;
+    case "heartbeat":
+      // Just refresh last_heartbeat; keep current status
+      next.status = state.status === "working" ? "idle" : state.status;
+      next.message = state.status === "working" ? "waiting" : state.message;
+      next.pending = state.status === "working" ? 0 : state.pending;
       break;
     default:
       return state;
