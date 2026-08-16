@@ -1,0 +1,6 @@
+node_modules/
+*.tsbuildinfo
+*.log
+
+# lockfile kept for reproducible installs
+!package-lock.json

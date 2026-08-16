@@ -20,20 +20,25 @@ from ..config import ScreenConfig
 logger = logging.getLogger(__name__)
 
 
-async def _fetch_agent(session: Any, name: str, url: str) -> Dict[str, Any]:
+async def _fetch_agent(session: Any, name: str, url: str) -> List[Dict[str, Any]]:
     import aiohttp
 
     try:
         resp = await session.get(url, timeout=aiohttp.ClientTimeout(total=10))
         resp.raise_for_status()
         data = await resp.json()
-        if not isinstance(data, dict):
-            data = {"value": data}
-        data["name"] = name
-        return data
+        if isinstance(data, list):
+            rows = [d if isinstance(d, dict) else {"value": d} for d in data]
+        elif isinstance(data, dict):
+            rows = [data]
+        else:
+            rows = [{"value": data}]
+        for r in rows:
+            r.setdefault("name", name)
+        return rows
     except Exception as e:
         logger.warning(f"Fetch failed for agent {name}: {e}")
-        return {"name": name, "__fetch_error": True}
+        return [{"name": name, "__fetch_error": True}]
 
 
 class AgentFeedScreen(Screen):
@@ -69,18 +74,18 @@ class AgentFeedScreen(Screen):
                 )
                 continue
 
-            data = result
-            heartbeat = data.get("last_heartbeat")
-            if heartbeat and not data.get("__fetch_error"):
-                try:
-                    dt = datetime.fromisoformat(heartbeat)
-                    age = (datetime.now(timezone.utc) - dt).total_seconds()
-                    if age > stale_threshold:
-                        data["status"] = "offline"
-                except (ValueError, TypeError):
-                    pass
+            for data in result:  # result is list[dict] from _fetch_agent
+                heartbeat = data.get("last_heartbeat")
+                if heartbeat and not data.get("__fetch_error"):
+                    try:
+                        dt = datetime.fromisoformat(heartbeat)
+                        age = (datetime.now(timezone.utc) - dt).total_seconds()
+                        if age > stale_threshold:
+                            data["status"] = "offline"
+                    except (ValueError, TypeError):
+                        pass
 
-            processed.append(data)
+                processed.append(data)
 
         self._agents_data = processed
 

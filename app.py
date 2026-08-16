@@ -759,7 +759,10 @@ def _doctor(config_dir: str) -> None:
     try:
         import lgpio
 
-        print(f"\nlgpio: {lgpio.__version__}")
+        # lgpio has no __version__ attribute; use the module-level version
+        # string if present, otherwise report as installed.
+        lgpio_ver = getattr(lgpio, "version", None) or getattr(lgpio, "__version__", None)
+        print(f"\nlgpio: {lgpio_ver or 'installed (version unknown)'}")
     except ImportError:
         print("\nlgpio: MISSING (sudo apt install python3-lgpio)")
 

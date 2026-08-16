@@ -326,21 +326,122 @@ One agent per screen, with sprites and a mood map:
 Tamagotchai ships with `agent_feed` as its default screen. All agents on one screen as compact rows:
 
 ```yaml
-  - name: OpenCode
-    template: agent_feed
+  - name: Agents
+    type: agent_feed
     poll_interval: 5
     display_duration: 15
     stale_threshold: 120
     agents:
-      - name: OpenCode
-        url: http://127.0.0.1:7788/status
+      - name: pi
+        url: http://127.0.0.1:7788/status/all
+      - name: hermes1
+        url: https://hermes1.<your-cf-tunnel>.example/status/all
 ```
 
 Rendered as compact rows: `[icon] AgentName  working  "cmd: bash"`
 
-When `metadata` is present, the `agent_feed` template also displays model name, token counts, and cost inline (e.g. `claude-3.7  $0.004` or `1.2k tok  $0.004`).
+When `metadata` is present, the `agent_feed` screen also displays model name, token counts, and cost inline (e.g. `claude-3.7  $0.004` or `1.2k tok  $0.004`).
+
+Each URL may return either a single status dict (`/status`) or an array of sessions (`/status/all`). Arrays expand into one row per session, so a daemon aggregating multiple sessions on one host renders as multiple rows.
 
 **When no agent is reachable**, the screen shows setup instructions instead of a cryptic offline error -- telling the user how to install the plugin and start the agent.
+
+## pi Native Integration (daemon + extension)
+
+For **pi** agents, you don't build a custom HTTP endpoint. A pi extension
+(`pi-tamagotchai`) writes session state to JSON files on disk, and an
+always-on daemon (`tamagotchai-agentd`) serves those files over HTTP. The
+daemon keeps port 7788 answering `idle` even when no pi session is active,
+so the display never sees a connection error while the daemon is up.
+
+This same daemon also powers **hermes** hosts, but via a webhook backend
+(HMAC-signed POSTs) instead of file polling.
+
+### Architecture
+
+```
+ pi process                  hermes process
+ ┌─────────────────┐         ┌─────────────────┐
+ │ pi-tamagotchai  │         │ hermes          │
+ │ extension       │         │ (outbound hook) │
+ │ writes files    │         │  POSTs /ingest  │
+ └──────┬──────────┘         └──────┬──────────┘
+        │ files                     │ HTTPS + HMAC
+        ▼                           ▼
+ ┌─────────────────┐         ┌─────────────────┐
+ │ tamagotchai-    │         │ tamagotchai-    │
+ │ agentd (file)   │         │ agentd (webhook)│
+ │ 0.0.0.0:7788    │         │ 0.0.0.0:7788    │
+ └──────┬──────────┘         └──────┬──────────┘
+        │ GET /status/all           │ GET /status/all
+        └────────────┬──────────────┘
+                     ▼
+        ┌─────────────────────────┐
+        │ tamagotchi display      │
+        │ agent_feed screen       │
+        └─────────────────────────┘
+```
+
+### 1. Install the pi extension (on the pi host)
+
+```bash
+./plugins/pi-tamagotchai/install.sh
+# then in pi: /reload
+```
+
+This symlinks the extension into `~/.pi/agent/extensions/pi-tamagotchai` and
+creates `~/.pi/agent/tamagotchai/sessions/`. The extension writes one JSON
+file per session; no sockets, no timers.
+
+### 2. Install the daemon (systemd)
+
+```bash
+./plugins/tamagotchai-agentd/install.sh
+sudo systemctl enable --now tamagotchai-agentd@<user>
+```
+
+Verify:
+```bash
+curl http://127.0.0.1:7788/status/all   # -> array with one pi session
+```
+
+Logs: `journalctl -u tamagotchai-agentd@<user> -f`
+
+### 3. Point Tamagotchai at it
+
+```yaml
+screens:
+  - name: Agents
+    type: agent_feed
+    poll_interval: 5
+    display_duration: 15
+    stale_threshold: 120
+    agents:
+      - name: pi
+        url: http://127.0.0.1:7788/status/all
+      - name: hermes1
+        url: https://hermes1.<your-cf-tunnel>.example/status/all
+```
+
+### 4. hermes hosts (webhook backend)
+
+On each hermes host, run the daemon with the webhook backend:
+
+```bash
+TAMAGOTCHAI_BACKEND=webhook \
+  HERMES_WEBHOOK_SECRET=<shared-secret> \
+  PYTHONPATH=plugins python plugins/tamagotchai-agentd/agentd.py
+```
+
+Point hermes's outbound webhook at `http://127.0.0.1:7788/ingest` with header
+`X-Tamagotchai-Signature: sha256=<hex>` (HMAC-SHA256 of the body). Expose the
+daemon's `/status/all` via a tunnel (tailscale/cloudflared) and fill the real
+hostname into `screens.yml`.
+
+See [`plugins/tamagotchai-agentd/README.md`](plugins/tamagotchai-agentd/README.md)
+for the full event map, env overrides, and a live integration checklist.
+
+## OpenCode Native Integration
 
 ## OpenCode Native Integration
 
@@ -376,7 +477,7 @@ curl http://localhost:7788/status
 ```yaml
 screens:
   - name: OpenCode
-    template: agent_feed
+    type: agent_feed
     poll_interval: 5
     display_duration: 15
     stale_threshold: 120
