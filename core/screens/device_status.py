@@ -44,16 +44,43 @@ def _run_cmd(cmd: list[str], fallback: str = "--") -> str:
 
 
 def _get_ip() -> str:
+    # Primary: open a UDP socket to a public address; the kernel picks the
+    # outgoing interface IP. No packets actually sent (SOCK_DGRAM). Works
+    # regardless of nmcli version or interface name.
+    import socket as _sock
+    for target in ("8.8.8.8", "1.1.1.1", "223.5.5.5"):
+        try:
+            s = _sock.socket(_sock.AF_INET, _sock.SOCK_DGRAM)
+            s.settimeout(1)
+            s.connect((target, 80))
+            ip = s.getsockname()[0]
+            s.close()
+            if ip and not ip.startswith("127."):
+                return ip
+        except OSError:
+            try:
+                s.close()
+            except OSError:
+                pass
+    # Fallback: hostname -I (first non-loopback)
+    try:
+        out = _run_cmd(["hostname", "-I"])
+        if out:
+            for ip in out.split():
+                if not ip.startswith("127."):
+                    return ip
+    except Exception:
+        pass
+    # Fallback: nmcli (older versions expose IP4.ADDRESS)
     out = _run_cmd(["nmcli", "-t", "-f", "DEVICE,IP4.ADDRESS", "device", "status"])
-    if not out or out == "--":
-        return "--"
-    for line in out.split("\n"):
-        parts = line.split(":")
-        if len(parts) >= 2 and parts[0] == "wlan0" and parts[1]:
-            addr = parts[1]
-            if "/" in addr:
-                addr = addr.split("/")[0]
-            return addr
+    if out and out != "--":
+        for line in out.split("\n"):
+            parts = line.split(":")
+            if len(parts) >= 2 and parts[0].startswith("wl") and parts[1]:
+                addr = parts[1]
+                if "/" in addr:
+                    addr = addr.split("/")[0]
+                return addr
     return "--"
 
 
