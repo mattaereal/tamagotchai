@@ -1,56 +1,35 @@
-# Screen definitions for the e-paper display.
+# tamagotchai screens configuration
 # The scheduler cycles through each screen in order.
 #
-# Default screens:
-#   1. OpenCode detail (local agent)
-#   2. AI Services status board (OpenAI, Anthropic, GitHub, local agent)
-#   3. Device vitals (CPU, memory, disk, WiFi, battery)
+# One daemon per agent host serves Standard Agent Status JSON on :7788.
+#   - pi runs on this Pi Zero (127.0.0.1); the pi-tamagotchai extension writes
+#     session files, tamagotchai-agentd (file backend) serves them.
+#   - hermes agents are remote; expose their daemons via a tunnel
+#     (tailscale/cloudflared) and fill in the real hostnames below.
 #
-# Users can comment/uncomment info_lines to customize the OpenCode screen.
-# All keys use dot-notation (e.g. metadata.model).
+# Default screens:
+#   1. Agents -- multi-agent feed (pi + hermes1 + hermes2)
+#   2. AI Services -- public status boards (OpenAI, Anthropic, GitHub)
+#   3. Device -- local vitals (CPU, memory, disk, WiFi, battery)
 
 screens:
-  # --- Local agent detail ---
-  - name: OpenCode
-    type: opencode
+  # --- Multi-agent feed ---
+  # Each URL returns either a single status dict (/status) or an array of
+  # sessions (/status/all). Arrays expand into one row per session.
+  - name: Agents
+    type: agent_feed
     poll_interval: 5
     display_duration: 15
     stale_threshold: 120
-    url: http://127.0.0.1:7788/status
-    info_lines:
-      # Core fields -- comment/uncomment to customize
-      - label: model
-        key: metadata.model
-        max_length: 18
-      - label: tok
-        template: "{0} / {1}"
-        keys: [metadata.tokens_input, metadata.tokens_output]
-        max_length: 20
-      - label: cost
-        template: "{0}"
-        keys: [metadata.cost_usd]
-        max_length: 12
-      - label: tool
-        key: metadata.tool_name
-        max_length: 16
-      - label: files
-        key: metadata.files_modified
-        max_length: 12
-      - label: msgs
-        key: metadata.message_count
-        max_length: 12
-      - label: duration
-        key: metadata.session_duration_ms
-        max_length: 14
-      - label: diff
-        template: "+{0} / -{1}"
-        keys: [metadata.lines_added, metadata.lines_removed]
-        max_length: 16
-      - label: commits
-        key: metadata.commits
-        max_length: 10
+    agents:
+      - name: pi
+        url: http://127.0.0.1:7788/status/all
+      - name: hermes1
+        url: https://hermes1.<your-cf-tunnel>.example/status/all
+      - name: hermes2
+        url: https://hermes2.<your-cf-tunnel>.example/status/all
 
-  # --- AI service health ---
+  # --- Public AI service health ---
   - name: AI Services
     type: status_board
     poll_interval: 60
@@ -77,21 +56,6 @@ screens:
         items:
           - key: Overall
             label: GH
-      # OpenRouter has no public JSON status endpoint yet
-      # - name: OpenRouter
-      #   url: YOUR_OPENROUTER_STATUS_URL
-      #   type: json
-      #   icon: generic
-      #   items:
-      #     - key: status
-      #       label: API
-      - name: OpenCode
-        url: http://127.0.0.1:7788/status
-        type: json
-        icon: generic
-        items:
-          - key: status
-            label: Agent
 
   # --- Local device vitals ---
   - name: Device
