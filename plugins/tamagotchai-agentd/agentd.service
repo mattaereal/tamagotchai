@@ -1,0 +1,20 @@
+[Unit]
+Description=tamagotchai status daemon (always-on agent /status server)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h
+Environment=PYTHONPATH=%h/tamagotchai/plugins
+Environment=TAMAGOTCHAI_BACKEND=file
+Environment=TAMAGOTCHAI_PORT=7788
+Environment=TAMAGOTCHAI_STALE_SECS=120
+# For hermes hosts, set backend=webhook and set HERMES_WEBHOOK_SECRET in an EnvironmentFile.
+ExecStart=/usr/bin/python3 %h/tamagotchai/plugins/tamagotchai-agentd/agentd.py
+Restart=always
+RestartSec=3
+User=%i
+
+[Install]
+WantedBy=default.target
